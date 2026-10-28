@@ -18,3 +18,7 @@ This is a simple weather tracking API that provides weather data based on user i
 
 ## License
 This project is licensed under the MIT License.
+
+## Additional Information
+
+This API can be used to track weather conditions in various locations. Make sure to provide a valid location in the query parameters to get accurate data.
