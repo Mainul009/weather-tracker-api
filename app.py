@@ -1,3 +1,4 @@
+import os
 from flask import Flask, jsonify
 from flask_cors import CORS
 from db import create_indexes
@@ -9,11 +10,20 @@ from blueprints.analytics import analytics_bp
 from blueprints.tracker import tracker_bp
 from blueprints.alerts import alerts_bp
 
+
 def create_app():
     app = Flask(__name__)
     CORS(app)
-    for bp in (auth_bp, locations_bp, forecasts_bp, observations_bp,
-               analytics_bp, tracker_bp, alerts_bp):
+
+    for bp in (
+        auth_bp,
+        locations_bp,
+        forecasts_bp,
+        observations_bp,
+        analytics_bp,
+        tracker_bp,
+        alerts_bp,
+    ):
         app.register_blueprint(bp, url_prefix="/api/v1")
 
     @app.errorhandler(404)
@@ -30,6 +40,13 @@ def create_app():
 
     return app
 
+
 if __name__ == "__main__":
     create_indexes()
-create_app().run(debug=True, port=5001, use_reloader=False)
+    app = create_app()
+    app.run(
+        host="0.0.0.0",
+        port=int(os.getenv("PORT", "5000")),
+        debug=os.getenv("FLASK_DEBUG", "False").lower() == "true",
+        use_reloader=False,
+    )
