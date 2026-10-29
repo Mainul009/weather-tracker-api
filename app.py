@@ -32,4 +32,4 @@ def create_app():
 
 if __name__ == "__main__":
     create_indexes()
-    create_app().run(debug=True, port=5001)
+create_app().run(debug=True, port=5001, use_reloader=False)
