@@ -1,0 +1,2180 @@
+{
+  "info": {
+    "_postman_id": "060bdb79-9bd6-453d-aaa8-e1e1cb985baa",
+    "name": "Weather Tracker API",
+    "description": "REST API for tracking weather forecasts and observations for 38 cities. Built with Flask and MongoDB. Base URL: `http://127.0.0.1:5001/api/v1`. Write operations need a Bearer token from `/auth/login`. Admin-only routes return 403 for normal users. Test accounts alice, bob and carol use the password `password123` (test data only).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "59287960",
+    "_collection_link": "https://go.postman.co/collection/59287960-060bdb79-9bd6-453d-aaa8-e1e1cb985baa?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "   pm.test(\"Login works\", () => pm.response.to.have.status(200));\r\n   pm.collectionVariables.set(\"token\", pm.response.json().token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{json_web_token_07ks}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"alice\", \"password\": \"password123\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "StartFragmentLogs in and returns a JWT token valid for 2 hours EndFragment."
+          },
+          "response": [
+            {
+              "name": "200 with a token",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"username\": \"alice\", \"password\": \"password123\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "_postman_previewlanguage": null,
+              "header": null,
+              "cookie": [],
+              "body": null
+            }
+          ]
+        },
+        {
+          "name": "Register alice",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Registered or already exists\", () => pm.expect([201, 409]).to.include(pm.response.code));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"alice\",\"email\":\"alice@test.com\",\"password\":\"password123\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Registers a new user account for alice and stores the returned JWT token."
+          },
+          "response": []
+        },
+        {
+          "name": "Register bad password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"zed\",\"email\":\"z@test.com\",\"password\":\"123\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Attempts to register with a password that fails validation rules. Expects 400 Bad Request."
+          },
+          "response": []
+        }
+      ],
+      "description": "Endpoints for registering new users and logging in to obtain a JWT token."
+    },
+    {
+      "name": "Locations",
+      "item": [
+        {
+          "name": "List locations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/locations?pn=1&ps=5",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "locations"
+              ],
+              "query": [
+                {
+                  "key": "pn",
+                  "value": "1"
+                },
+                {
+                  "key": "ps",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Returns a paginated list of all tracked city locations."
+          },
+          "response": [
+            {
+              "name": "200 with data",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/locations?pn=1&ps=5",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "locations"
+                  ],
+                  "query": [
+                    {
+                      "key": "pn",
+                      "value": "1"
+                    },
+                    {
+                      "key": "ps",
+                      "value": "5"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.9 Python/3.15.0"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 30 Oct 2026 00:21:23 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "1945"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": [\n        {\n            \"_id\": \"6ae285cc10664f36d5bda556\",\n            \"country\": \"Netherlands\",\n            \"elevation_m\": 0,\n            \"geo\": {\n                \"coordinates\": [\n                    4.9041,\n                    52.3676\n                ],\n                \"type\": \"Point\"\n            },\n            \"name\": \"Amsterdam\",\n            \"region\": \"North Holland\",\n            \"tags\": [\n                \"coastal\",\n                \"city\"\n            ],\n            \"timezone\": \"Europe/Amsterdam\"\n        },\n        {\n            \"_id\": \"6ae285ce10664f36d5bda6cd\",\n            \"country\": \"Greece\",\n            \"elevation_m\": 70,\n            \"geo\": {\n                \"coordinates\": [\n                    23.7275,\n                    37.9838\n                ],\n                \"type\": \"Point\"\n            },\n            \"name\": \"Athens\",\n            \"region\": \"Attica\",\n            \"tags\": [\n                \"city\",\n                \"hot\"\n            ],\n            \"timezone\": \"Europe/Athens\"\n        },\n        {\n            \"_id\": \"6ae285d710664f36d5bdae9d\",\n            \"country\": \"New Zealand\",\n            \"elevation_m\": 20,\n            \"geo\": {\n                \"coordinates\": [\n                    174.7633,\n                    -36.8485\n                ],\n                \"type\": \"Point\"\n            },\n            \"name\": \"Auckland\",\n            \"region\": \"Auckland\",\n            \"tags\": [\n                \"coastal\"\n            ],\n            \"timezone\": \"Pacific/Auckland\"\n        },\n        {\n            \"_id\": \"6ae285d410664f36d5bdac2c\",\n            \"country\": \"Thailand\",\n            \"elevation_m\": 2,\n            \"geo\": {\n                \"coordinates\": [\n                    100.5018,\n                    13.7563\n                ],\n                \"type\": \"Point\"\n            },\n            \"name\": \"Bangkok\",\n            \"region\": \"Bangkok\",\n            \"tags\": [\n                \"city\",\n                \"hot\"\n            ],\n            \"timezone\": \"Asia/Bangkok\"\n        },\n        {\n            \"_id\": \"6ae285d610664f36d5bdada3\",\n            \"country\": \"China\",\n            \"elevation_m\": 44,\n            \"geo\": {\n                \"coordinates\": [\n                    116.4074,\n                    39.9042\n                ],\n                \"type\": \"Point\"\n            },\n            \"name\": \"Beijing\",\n            \"region\": \"Beijing\",\n            \"tags\": [\n                \"city\",\n                \"inland\"\n            ],\n            \"timezone\": \"Asia/Shanghai\"\n        }\n    ],\n    \"page\": 1,\n    \"page_size\": 5,\n    \"total\": 41,\n    \"total_pages\": 9\n}"
+            }
+          ]
+        },
+        {
+          "name": "Filter by country",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/locations?country=UK",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "locations"
+              ],
+              "query": [
+                {
+                  "key": "country",
+                  "value": "UK"
+                }
+              ]
+            },
+            "description": "Returns all tracked locations filtered by the given country code."
+          },
+          "response": []
+        },
+        {
+          "name": "Nearby",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/locations/nearby?lat=54.6&lng=-5.9&radius_km=500",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "locations",
+                "nearby"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "54.6"
+                },
+                {
+                  "key": "lng",
+                  "value": "-5.9"
+                },
+                {
+                  "key": "radius_km",
+                  "value": "500"
+                }
+              ]
+            },
+            "description": "Returns locations within a given radius (km) of the specified latitude and longitude."
+          },
+          "response": []
+        },
+        {
+          "name": "Get one",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/locations/{{city_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "locations",
+                "{{city_id}}"
+              ]
+            },
+            "description": "Returns the details of a single location by its ID ({{city_id}})."
+          },
+          "response": []
+        },
+        {
+          "name": "Invalid id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/locations/abc",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "locations",
+                "abc"
+              ]
+            },
+            "description": "Requests a location using a non-numeric ID. Expects a 400 or 404 error response."
+          },
+          "response": []
+        }
+      ],
+      "description": "Endpoints for listing, filtering, and retrieving weather-tracked city locations."
+    },
+    {
+      "name": "Forecasts",
+      "item": [
+        {
+          "name": "Add forecast",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "  pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
+                  "  pm.collectionVariables.set(\"forecast_id\", pm.response.json().id);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "  const d = new Date(Date.UTC(2031, 0, 1) + Math.floor(Math.random() * 3000) * 86400000);\r",
+                  "  pm.collectionVariables.set(\"forecast_date\", d.toISOString().slice(0, 10));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "  {\"date\": \"{{forecast_date}}\", \"temp_max\": 12, \"temp_min\": 5, \"humidity\": 80, \"wind_kph\": 20, \"precip_mm\": 3, \"condition\": \"Rain\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/locations/{{city_id}}/forecasts",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "locations",
+                "{{city_id}}",
+                "forecasts"
+              ]
+            },
+            "description": "Creates a new forecast for the tracked city. Saves the new forecast ID to {{forecast_id}}."
+          },
+          "response": [
+            {
+              "name": "201",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "  {\"date\": \"{{forecast_date}}\", \"temp_max\": 12, \"temp_min\": 5, \"humidity\": 80, \"wind_kph\": 20, \"precip_mm\": 3, \"condition\": \"Rain\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/locations/{{city_id}}/forecasts",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "locations",
+                    "{{city_id}}",
+                    "forecasts"
+                  ]
+                }
+              },
+              "status": "CREATED",
+              "code": 201,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.9 Python/3.15.0"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 30 Oct 2026 00:22:22 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "129"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"id\": \"6ae3e33e65bb2bbd74a1c2bb\",\n    \"url\": \"/api/v1/locations/6ae285d710664f36d5bdae9d/forecasts/6ae3e33e65bb2bbd74a1c2bb\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Duplicate forecast",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 409\", () => pm.response.to.have.status(409));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"date\":\"{{forecast_date}}\",\"temp_max\":12,\"temp_min\":5,\"humidity\":80,\"wind_kph\":20,\"precip_mm\":3,\"condition\":\"Rain\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/locations/{{city_id}}/forecasts",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "locations",
+                "{{city_id}}",
+                "forecasts"
+              ]
+            },
+            "description": "Attempts to add a forecast for a date that already exists. Expects 409 Conflict."
+          },
+          "response": [
+            {
+              "name": "409",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"date\":\"{{forecast_date}}\",\"temp_max\":12,\"temp_min\":5,\"humidity\":80,\"wind_kph\":20,\"precip_mm\":3,\"condition\":\"Rain\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/locations/{{city_id}}/forecasts",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "locations",
+                    "{{city_id}}",
+                    "forecasts"
+                  ]
+                }
+              },
+              "status": "CONFLICT",
+              "code": 409,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.9 Python/3.15.0"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 30 Oct 2026 00:23:08 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "57"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"error\": \"A forecast for that date already exists\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Bad humidity",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));\r",
+                  "pm.test(\"Names the humidity field\", () => pm.expect(pm.response.json().details).to.have.property(\"humidity\"));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"date\":\"2030-01-02\",\"temp_max\":12,\"temp_min\":5,\"humidity\":500,\"condition\":\"Rain\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/locations/{{city_id}}/forecasts",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "locations",
+                "{{city_id}}",
+                "forecasts"
+              ]
+            },
+            "description": "Submits a forecast with an invalid humidity value (500). Expects 400 Bad Request with the humidity field named in the error details."
+          },
+          "response": [
+            {
+              "name": "400 with the details message",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"date\":\"2030-01-02\",\"temp_max\":12,\"temp_min\":5,\"humidity\":500,\"condition\":\"Rain\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/locations/{{city_id}}/forecasts",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "locations",
+                    "{{city_id}}",
+                    "forecasts"
+                  ]
+                }
+              },
+              "status": "BAD REQUEST",
+              "code": 400,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.9 Python/3.15.0"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 30 Oct 2026 00:23:44 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "99"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"details\": {\n        \"humidity\": \"must be between 0 and 100\"\n    },\n    \"error\": \"Validation failed\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete forecast",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 204\", () => pm.response.to.have.status(204));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/locations/{{city_id}}/forecasts/{{forecast_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "locations",
+                "{{city_id}}",
+                "forecasts",
+                "{{forecast_id}}"
+              ]
+            },
+            "description": "Deletes the forecast saved in {{forecast_id}}. Expects 204 No Content."
+          },
+          "response": []
+        },
+        {
+          "name": "Add forecast as normal user",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Register bob if needed, then log in and store bob_token",
+                  "const baseUrl = pm.environment.get('base_url');",
+                  "",
+                  "// Try to register bob (ignore 409 if already exists)",
+                  "const registerReq = {",
+                  "    url: baseUrl + '/auth/register',",
+                  "    method: 'POST',",
+                  "    header: { 'Content-Type': 'application/json' },",
+                  "    body: {",
+                  "        mode: 'raw',",
+                  "        raw: JSON.stringify({ username: 'bob', email: 'bob@test.com', password: 'password123' })",
+                  "    }",
+                  "};",
+                  "",
+                  "pm.sendRequest(registerReq, (err, res) => {",
+                  "    // Now log in as bob",
+                  "    const loginReq = {",
+                  "        url: baseUrl + '/auth/login',",
+                  "        method: 'POST',",
+                  "        header: { 'Content-Type': 'application/json' },",
+                  "        body: {",
+                  "            mode: 'raw',",
+                  "            raw: JSON.stringify({ username: 'bob', password: 'password123' })",
+                  "        }",
+                  "    };",
+                  "    pm.sendRequest(loginReq, (err2, res2) => {",
+                  "        const bobToken = res2.json().token;",
+                  "        pm.collectionVariables.set('bob_token', bobToken);",
+                  "        pm.request.headers.upsert({ key: 'Authorization', value: 'Bearer ' + bobToken });",
+                  "    });",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 403\", () => pm.response.to.have.status(403));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "disabled": false
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"date\": \"{{forecast_date}}\", \"temp_max\": 12, \"temp_min\": 5, \"humidity\": 80, \"wind_kph\": 20, \"precip_mm\": 3, \"condition\": \"Rain\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/locations/{{city_id}}/forecasts",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "locations",
+                "{{city_id}}",
+                "forecasts"
+              ]
+            },
+            "description": "Attempts to add a forecast as a normal (non-admin) user. Expects a 403 Forbidden response."
+          },
+          "response": []
+        }
+      ],
+      "description": "Endpoints for creating, retrieving, and deleting weather forecasts for a location."
+    },
+    {
+      "name": "Observations",
+      "item": [
+        {
+          "name": "Add observation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "  pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
+                  "  pm.collectionVariables.set(\"obs_id\", pm.response.json().id);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "  const d = new Date(Date.UTC(2031, 0, 1) + Math.floor(Math.random() * 3000) * 86400000);\r",
+                  "  pm.collectionVariables.set(\"obs_date\", d.toISOString().slice(0, 10));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"condition\": \"Clear\", \"date\": \"{{obs_date}}\", \"temp_max\": 25, \"temp_min\": 18}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/locations/{{city_id}}/observations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "locations",
+                "{{city_id}}",
+                "observations"
+              ],
+              "query": [
+                {
+                  "key": "user",
+                  "value": "bob",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Submits a new weather observation for the tracked city. Saves the new observation ID to {{obs_id}}."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete observation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 204\", () => pm.response.to.have.status(204));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/locations/{{city_id}}/observations/{{obs_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "locations",
+                "{{city_id}}",
+                "observations",
+                "{{obs_id}}"
+              ]
+            },
+            "description": "Deletes the observation saved in {{obs_id}}. Expects 204 No Content."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete someone else's observation",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Register bob and carol if needed, log in as both.",
+                  "// Create an observation as bob, save its ID to bob_obs_id.",
+                  "// Then set Authorization header to carol's token so she tries to delete bob's observation.",
+                  "const baseUrl = pm.environment.get('base_url');",
+                  "const cityId = pm.environment.get('city_id');",
+                  "",
+                  "// Register bob",
+                  "const registerBob = {",
+                  "    url: baseUrl + '/auth/register',",
+                  "    method: 'POST',",
+                  "    header: { 'Content-Type': 'application/json' },",
+                  "    body: { mode: 'raw', raw: JSON.stringify({ username: 'bob', email: 'bob@test.com', password: 'password123' }) }",
+                  "};",
+                  "",
+                  "// Register carol",
+                  "const registerCarol = {",
+                  "    url: baseUrl + '/auth/register',",
+                  "    method: 'POST',",
+                  "    header: { 'Content-Type': 'application/json' },",
+                  "    body: { mode: 'raw', raw: JSON.stringify({ username: 'carol', email: 'carol@test.com', password: 'password123' }) }",
+                  "};",
+                  "",
+                  "pm.sendRequest(registerBob, () => {",
+                  "    pm.sendRequest(registerCarol, () => {",
+                  "        // Log in as bob",
+                  "        pm.sendRequest({",
+                  "            url: baseUrl + '/auth/login',",
+                  "            method: 'POST',",
+                  "            header: { 'Content-Type': 'application/json' },",
+                  "            body: { mode: 'raw', raw: JSON.stringify({ username: 'bob', password: 'password123' }) }",
+                  "        }, (e1, bobLogin) => {",
+                  "            const bobToken = bobLogin.json().token;",
+                  "            pm.collectionVariables.set('bob_token', bobToken);",
+                  "",
+                  "            // Log in as carol",
+                  "            pm.sendRequest({",
+                  "                url: baseUrl + '/auth/login',",
+                  "                method: 'POST',",
+                  "                header: { 'Content-Type': 'application/json' },",
+                  "                body: { mode: 'raw', raw: JSON.stringify({ username: 'carol', password: 'password123' }) }",
+                  "            }, (e2, carolLogin) => {",
+                  "                const carolToken = carolLogin.json().token;",
+                  "                pm.collectionVariables.set('carol_token', carolToken);",
+                  "",
+                  "                // Create an observation as bob",
+                  "                const obsDate = new Date(Date.UTC(2031, 0, 1) + Math.floor(Math.random() * 3000) * 86400000)",
+                  "                    .toISOString().slice(0, 10);",
+                  "                pm.sendRequest({",
+                  "                    url: baseUrl + '/locations/' + cityId + '/observations',",
+                  "                    method: 'POST',",
+                  "                    header: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + bobToken },",
+                  "                    body: { mode: 'raw', raw: JSON.stringify({ condition: 'Clear', date: obsDate, temp_max: 20, temp_min: 10 }) }",
+                  "                }, (e3, obsRes) => {",
+                  "                    const bobObsId = obsRes.json().id;",
+                  "                    pm.collectionVariables.set('bob_obs_id', bobObsId);",
+                  "                    // Set carol's token on the actual request",
+                  "                    pm.request.headers.upsert({ key: 'Authorization', value: 'Bearer ' + carolToken });",
+                  "                });",
+                  "            });",
+                  "        });",
+                  "    });",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/locations/{{city_id}}/observations/{{bob_obs_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "locations",
+                "{{city_id}}",
+                "observations",
+                "{{bob_obs_id}}"
+              ]
+            },
+            "description": "Attempts to delete another user's observation using a different user's token. Expects a 403 Forbidden response."
+          },
+          "response": []
+        }
+      ],
+      "description": "Endpoints for submitting and deleting observed weather data for a location."
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Location stats",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/locations/{{city_id}}/stats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "locations",
+                "{{city_id}}",
+                "stats"
+              ]
+            },
+            "description": "Returns aggregated weather statistics for the tracked city."
+          },
+          "response": []
+        },
+        {
+          "name": "Forecast accuracy",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Has accuracy fields\", () => {",
+                  "    const j = pm.response.json();",
+                  "    pm.expect(j).to.have.property(\"days_compared\");",
+                  "    pm.expect(j).to.have.property(\"mean_abs_error_c\");",
+                  "    pm.expect(j).to.have.property(\"pct_within_2c\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/locations/{{city_id}}/accuracy",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "locations",
+                "{{city_id}}",
+                "accuracy"
+              ]
+            },
+            "description": "Returns the forecast accuracy score for the tracked city."
+          },
+          "response": [
+            {
+              "name": "200",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/locations/{{city_id}}/accuracy",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "locations",
+                    "{{city_id}}",
+                    "accuracy"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.9 Python/3.15.0"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 30 Oct 2026 00:24:24 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "181"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"_id\": \"6ae285d710664f36d5bdae9d\",\n    \"days_compared\": 43,\n    \"mean_abs_error_c\": 0.18,\n    \"name\": \"Auckland\",\n    \"pct_within_2c\": 97.7,\n    \"within_2c\": 42,\n    \"worst_error_c\": 5\n}"
+            }
+          ]
+        },
+        {
+          "name": "Hottest cities",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Returns up to 5 cities\", () => {",
+                  "    const j = pm.response.json();",
+                  "    pm.expect(j).to.be.an(\"array\");",
+                  "    pm.expect(j.length).to.be.at.most(5);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/analytics/hottest?limit=5",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "analytics",
+                "hottest"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Returns the top cities ranked by maximum temperature."
+          },
+          "response": []
+        },
+        {
+          "name": "Rainiest cities",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/analytics/rainiest?limit=5",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "analytics",
+                "rainiest"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Returns the top cities ranked by total precipitation."
+          },
+          "response": []
+        },
+        {
+          "name": "Windiest cities",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/analytics/windiest?limit=5",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "analytics",
+                "windiest"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Returns the top cities ranked by average wind speed."
+          },
+          "response": []
+        },
+        {
+          "name": "Hottest in UK",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/analytics/hottest?country=UK",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "analytics",
+                "hottest"
+              ],
+              "query": [
+                {
+                  "key": "country",
+                  "value": "UK"
+                }
+              ]
+            },
+            "description": "Returns the hottest cities filtered to the UK."
+          },
+          "response": []
+        },
+        {
+          "name": "Condition breakdown",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/analytics/condition-breakdown",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "analytics",
+                "condition-breakdown"
+              ]
+            },
+            "description": "Returns a breakdown of weather conditions (e.g. Rain, Clear) across all observations."
+          },
+          "response": []
+        },
+        {
+          "name": "Stats invalid id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/locations/abc/stats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "locations",
+                "abc",
+                "stats"
+              ]
+            },
+            "description": "Requests stats for a non-numeric location ID. Expects a 400 or 404 error response."
+          },
+          "response": []
+        }
+      ],
+      "description": "Endpoints for querying aggregated weather statistics and rankings across locations."
+    },
+    {
+      "name": "Tracker",
+      "item": [
+        {
+          "name": "Track a city",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/users/me/tracked/{{city_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "tracked",
+                "{{city_id}}"
+              ]
+            },
+            "description": "Adds the city ({{city_id}}) to the authenticated user's tracked cities list."
+          },
+          "response": [
+            {
+              "name": "201",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/users/me/tracked/{{city_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "users",
+                    "me",
+                    "tracked",
+                    "{{city_id}}"
+                  ]
+                }
+              },
+              "status": "CREATED",
+              "code": 201,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.9 Python/3.15.0"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 30 Oct 2026 00:24:49 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "36"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"Location tracked\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "My tracker dashboard",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Shows tracked cities\", () => {",
+                  "    const j = pm.response.json();",
+                  "    pm.expect(j).to.be.an(\"array\");",
+                  "    pm.expect(j.length).to.be.above(0);",
+                  "    pm.expect(j[0]).to.have.property(\"next_forecast\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/users/me/tracker",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "tracker"
+              ]
+            },
+            "description": "Returns the authenticated user's full tracker dashboard with all tracked cities."
+          },
+          "response": [
+            {
+              "name": "200",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/users/me/tracker",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "users",
+                    "me",
+                    "tracker"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.9 Python/3.15.0"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 30 Oct 2026 00:25:19 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "661"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "[\n    {\n        \"_id\": \"6ae285d710664f36d5bdae9d\",\n        \"country\": \"New Zealand\",\n        \"my_alerts\": [\n            {\n                \"_id\": \"6ae3dcf965bb2bbd74a1c2b9\",\n                \"active\": true,\n                \"created\": \"2026-10-29T23:55:37.307000\",\n                \"location_id\": \"6ae285d710664f36d5bdae9d\",\n                \"metric\": \"temp_max\",\n                \"operator\": \"gt\",\n                \"threshold\": 20,\n                \"user\": \"alice\"\n            }\n        ],\n        \"name\": \"Auckland\",\n        \"next_forecast\": {\n            \"_id\": \"6ae285d710664f36d5bdae53\",\n            \"condition\": \"Rain\",\n            \"date\": \"2026-10-30\",\n            \"humidity\": 61,\n            \"precip_mm\": 0.9,\n            \"temp_max\": 18.3,\n            \"temp_min\": 12.9,\n            \"wind_kph\": 34.7\n        }\n    }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Track without login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.remove('Authorization');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/users/me/tracked/{{city_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "tracked",
+                "{{city_id}}"
+              ]
+            },
+            "description": "Attempts to track a city without an Authorization header. Expects 401 Unauthorized."
+          },
+          "response": []
+        },
+        {
+          "name": "Track invalid id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/users/me/tracked/abc",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "tracked",
+                "abc"
+              ]
+            },
+            "description": "Attempts to track a city using a non-numeric ID. Expects a 400 or 404 error response."
+          },
+          "response": []
+        },
+        {
+          "name": "Untrack a city",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/users/me/tracked/{{city_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "tracked",
+                "{{city_id}}"
+              ]
+            },
+            "description": "Removes the city ({{city_id}}) from the authenticated user's tracked cities list."
+          },
+          "response": []
+        },
+        {
+          "name": "Untrack again",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/users/me/tracked/{{city_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "tracked",
+                "{{city_id}}"
+              ]
+            },
+            "description": "Untracks the city a second time to verify idempotent behaviour."
+          },
+          "response": []
+        }
+      ],
+      "description": "Endpoints for tracking and untracking cities, and viewing the user's tracker dashboard."
+    },
+    {
+      "name": "Alerts",
+      "item": [
+        {
+          "name": "Create alert",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
+                  "const res = pm.response.json();",
+                  "const id = res._id || res.id || res.alert_id;",
+                  "if (id) {",
+                  "    pm.collectionVariables.set('alert_id', id);",
+                  "    console.log('alert_id captured:', id);",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "disabled": false
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"location_id\": \"{{city_id}}\", \"metric\": \"temp_max\", \"operator\": \"gt\", \"threshold\": 5}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/alerts",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "alerts"
+              ]
+            },
+            "description": "Generated from cURL: curl -X POST {{base_url}}/alerts -H \"Content-Type: application/json\" -d '{\"location_id\": \"{{city_id}}\", \"metric\": \"temp_max\", \"operator\": \"gt\", \"threshold\": 5}'"
+          },
+          "response": [
+            {
+              "name": "201",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": false
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"location_id\": \"{{city_id}}\", \"metric\": \"temp_max\", \"operator\": \"gt\", \"threshold\": 5}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/alerts",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "alerts"
+                  ]
+                }
+              },
+              "status": "CREATED",
+              "code": 201,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.9 Python/3.15.0"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 30 Oct 2026 00:26:02 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "91"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"id\": \"6ae3e41a65bb2bbd74a1c2bd\",\n    \"url\": \"/api/v1/alerts/6ae3e41a65bb2bbd74a1c2bd\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create alert bad metric",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "disabled": false
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"location_id\": \"{{city_id}}\", \"metric\": \"sunshine\", \"operator\": \"gt\", \"threshold\": 5}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/alerts",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "alerts"
+              ]
+            },
+            "description": "Generated from cURL: curl -X POST {{base_url}}/alerts -H \"Content-Type: application/json\" -d '{\"location_id\": \"{{city_id}}\", \"metric\": \"sunshine\", \"operator\": \"gt\", \"threshold\": 5}'"
+          },
+          "response": []
+        },
+        {
+          "name": "List my alerts",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Returns a list\", () => pm.expect(pm.response.json()).to.be.an(\"array\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/alerts",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "alerts"
+              ]
+            },
+            "description": "Generated from cURL: curl -X GET {{base_url}}/alerts"
+          },
+          "response": []
+        },
+        {
+          "name": "Triggered alerts",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Returns a list\", () => pm.expect(pm.response.json()).to.be.an(\"array\"));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/alerts/triggered",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "alerts",
+                "triggered"
+              ]
+            },
+            "description": "Generated from cURL: curl -X GET {{base_url}}/alerts/triggered"
+          },
+          "response": []
+        },
+        {
+          "name": "Edit alert",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "disabled": false
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"threshold\": 20}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/alerts/{{alert_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "alerts",
+                "{{alert_id}}"
+              ]
+            },
+            "description": "Generated from cURL: curl -X PUT {{base_url}}/alerts/{{alert_id}} -H \"Content-Type: application/json\" -d '{\"threshold\": 20}'"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete alert",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/alerts/{{alert_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "alerts",
+                "{{alert_id}}"
+              ]
+            },
+            "description": "Generated from cURL: curl -X DELETE {{base_url}}/alerts/{{alert_id}}"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete alert again",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/alerts/{{alert_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "alerts",
+                "{{alert_id}}"
+              ]
+            },
+            "description": "Generated from cURL: curl -X DELETE {{base_url}}/alerts/{{alert_id}}"
+          },
+          "response": []
+        }
+      ],
+      "description": "Endpoints for creating, editing, listing, and deleting weather threshold alerts."
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "requests": {},
+        "exec": [
+          "const token = pm.collectionVariables.get('token');",
+          "if (token) {",
+          "    pm.request.headers.upsert({",
+          "        key: 'Authorization',",
+          "        value: 'Bearer ' + token",
+          "    });",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          "pm.test(\"No server error\", () => pm.expect(pm.response.code).to.be.below(500));\r",
+          "pm.test(\"Responds in under 1 second\", () => pm.expect(pm.response.responseTime).to.be.below(1000));"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "alert_id",
+      "value": ""
+    },
+    {
+      "key": "forecast_date",
+      "value": ""
+    },
+    {
+      "key": "forecast_id",
+      "value": ""
+    },
+    {
+      "key": "obs_date",
+      "value": ""
+    },
+    {
+      "key": "obs_id",
+      "value": ""
+    },
+    {
+      "key": "bob_token",
+      "value": ""
+    },
+    {
+      "key": "carol_token",
+      "value": ""
+    },
+    {
+      "key": "bob_obs_id",
+      "value": ""
+    }
+  ]
+}

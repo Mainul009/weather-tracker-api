@@ -1,0 +1,48 @@
+[{
+  "_id": {
+    "$oid": "6ae28a9e456b63dffba4f163"
+  },
+  "username": "alice",
+  "email": "alice@test.com",
+  "password": {
+    "$binary": {
+      "base64": "JDJiJDEyJDU3SjFoMUg4Tm5teVMubXdwc2tuZ2V1Mk42bGwuem5Fd25QRW5VdXNPejZ4TUhidldqbi9X",
+      "subType": "00"
+    }
+  },
+  "role": "admin",
+  "tracked_locations": [],
+  "units": "metric"
+},
+{
+  "_id": {
+    "$oid": "6ae2982024b47aeaf6979cc3"
+  },
+  "username": "bob",
+  "email": "bob@test.com",
+  "password": {
+    "$binary": {
+      "base64": "JDJiJDEyJFdvZnpXai55eEJwd3Joa2UucmhsM09raGx1WGxtSExLR0ouZ0oydU1SbGNSMldRTDdFOC9l",
+      "subType": "00"
+    }
+  },
+  "role": "user",
+  "tracked_locations": [],
+  "units": "metric"
+},
+{
+  "_id": {
+    "$oid": "6ae29af624b47aeaf6979cc9"
+  },
+  "username": "carol",
+  "email": "carol@test.com",
+  "password": {
+    "$binary": {
+      "base64": "JDJiJDEyJHo3TWVRaktzUXJkcmV0aDIyUlh3MS5RbXRjY3lsMXFpeDFoUXFBbDBHbFVqTDBjNlZFTWlP",
+      "subType": "00"
+    }
+  },
+  "role": "user",
+  "tracked_locations": [],
+  "units": "metric"
+}]

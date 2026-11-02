@@ -1,0 +1,1649 @@
+{
+	"id": "f7407497-f0e4-405d-8944-4b7b328220bd",
+	"name": "Weather Tracker API",
+	"timestamp": "2026-10-30T00:32:16.927Z",
+	"collection_id": "59287960-060bdb79-9bd6-453d-aaa8-e1e1cb985baa",
+	"folder_id": 0,
+	"environment_id": "59287960-0888fdec-8686-45cf-9c6a-9ad13e5310a3",
+	"totalPass": 117,
+	"delay": 0,
+	"persist": true,
+	"status": "finished",
+	"startedAt": "2026-10-30T00:32:05.052Z",
+	"totalFail": 0,
+	"results": [
+		{
+			"id": "ccbc9853-6138-485a-9eb8-913319a88449",
+			"name": "Login",
+			"url": "http://127.0.0.1:5001/api/v1/auth/login",
+			"time": 530,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Login works": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Login works": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				530
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Login works": true
+				}
+			]
+		},
+		{
+			"id": "7756ea5b-6ede-4eaf-9556-d064faa10288",
+			"name": "Register alice",
+			"url": "http://127.0.0.1:5001/api/v1/auth/register",
+			"time": 494,
+			"responseCode": {
+				"code": 409,
+				"name": "CONFLICT"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Registered or already exists": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Registered or already exists": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				494
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Registered or already exists": true
+				}
+			]
+		},
+		{
+			"id": "460bd7e3-d8f1-469a-af1b-44a0f1262b57",
+			"name": "Register bad password",
+			"url": "http://127.0.0.1:5001/api/v1/auth/register",
+			"time": 8,
+			"responseCode": {
+				"code": 400,
+				"name": "BAD REQUEST"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 400": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 400": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				8
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 400": true
+				}
+			]
+		},
+		{
+			"id": "edf62890-048c-46d5-abf1-4f2531f1bdbe",
+			"name": "List locations",
+			"url": "http://127.0.0.1:5001/api/v1/locations?pn=1&ps=5",
+			"time": 122,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 200": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 200": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				122
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 200": true
+				}
+			]
+		},
+		{
+			"id": "69452f56-f15a-4b37-ae06-762d67e9c86d",
+			"name": "Filter by country",
+			"url": "http://127.0.0.1:5001/api/v1/locations?country=UK",
+			"time": 27,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 200": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 200": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				27
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 200": true
+				}
+			]
+		},
+		{
+			"id": "1c56e252-2b7e-48cf-a17a-34f520f41238",
+			"name": "Nearby",
+			"url": "http://127.0.0.1:5001/api/v1/locations/nearby?lat=54.6&lng=-5.9&radius_km=500",
+			"time": 82,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 200": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 200": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				82
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 200": true
+				}
+			]
+		},
+		{
+			"id": "fed7f378-e583-4da7-9e11-e47a6421f14d",
+			"name": "Get one",
+			"url": "http://127.0.0.1:5001/api/v1/locations/6ae285d710664f36d5bdae9d",
+			"time": 14,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 200": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 200": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				14
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 200": true
+				}
+			]
+		},
+		{
+			"id": "01d32d44-1444-4826-a9f0-2f033a538975",
+			"name": "Invalid id",
+			"url": "http://127.0.0.1:5001/api/v1/locations/abc",
+			"time": 6,
+			"responseCode": {
+				"code": 400,
+				"name": "BAD REQUEST"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 400": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 400": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				6
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 400": true
+				}
+			]
+		},
+		{
+			"id": "98f5df66-854c-464c-9af2-51c8a4013a42",
+			"name": "Add forecast",
+			"url": "http://127.0.0.1:5001/api/v1/locations/6ae285d710664f36d5bdae9d/forecasts",
+			"time": 48,
+			"responseCode": {
+				"code": 201,
+				"name": "CREATED"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 201": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 201": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				48
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 201": true
+				}
+			]
+		},
+		{
+			"id": "d3e9822f-aafa-444c-a30e-b6319fb269e3",
+			"name": "Duplicate forecast",
+			"url": "http://127.0.0.1:5001/api/v1/locations/6ae285d710664f36d5bdae9d/forecasts",
+			"time": 23,
+			"responseCode": {
+				"code": 409,
+				"name": "CONFLICT"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 409": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 409": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				23
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 409": true
+				}
+			]
+		},
+		{
+			"id": "a02d3d39-55f3-44b0-ad04-e2d1a2038427",
+			"name": "Bad humidity",
+			"url": "http://127.0.0.1:5001/api/v1/locations/6ae285d710664f36d5bdae9d/forecasts",
+			"time": 9,
+			"responseCode": {
+				"code": 400,
+				"name": "BAD REQUEST"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 400": true,
+				"Names the humidity field": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 400": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Names the humidity field": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				9
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 400": true,
+					"Names the humidity field": true
+				}
+			]
+		},
+		{
+			"id": "76e58389-9d9c-4655-9597-25fb103033fb",
+			"name": "Delete forecast",
+			"url": "http://127.0.0.1:5001/api/v1/locations/6ae285d710664f36d5bdae9d/forecasts/6ae3e58a65bb2bbd74a1c2d1",
+			"time": 13,
+			"responseCode": {
+				"code": 204,
+				"name": "NO CONTENT"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 204": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 204": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				13
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 204": true
+				}
+			]
+		},
+		{
+			"id": "5b958d70-67e3-4a0d-821f-23fee520b1b9",
+			"name": "Add forecast as normal user",
+			"url": "http://127.0.0.1:5001/api/v1/locations/6ae285d710664f36d5bdae9d/forecasts",
+			"time": 8,
+			"responseCode": {
+				"code": 403,
+				"name": "FORBIDDEN"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 403": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 403": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				8
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 403": true
+				}
+			]
+		},
+		{
+			"id": "6406686f-c505-467f-a448-579087a46562",
+			"name": "Add observation",
+			"url": "http://127.0.0.1:5001/api/v1/locations/6ae285d710664f36d5bdae9d/observations",
+			"time": 12,
+			"responseCode": {
+				"code": 201,
+				"name": "CREATED"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 201": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 201": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				12
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 201": true
+				}
+			]
+		},
+		{
+			"id": "36c32b4b-7026-40f0-986d-8ffb25e6af1c",
+			"name": "Delete observation",
+			"url": "http://127.0.0.1:5001/api/v1/locations/6ae285d710664f36d5bdae9d/observations/6ae3e58c65bb2bbd74a1c2d4",
+			"time": 11,
+			"responseCode": {
+				"code": 204,
+				"name": "NO CONTENT"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 204": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 204": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				11
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 204": true
+				}
+			]
+		},
+		{
+			"id": "a922b08e-d853-4f9c-81c5-164f0d14aed0",
+			"name": "Delete someone else's observation",
+			"url": "http://127.0.0.1:5001/api/v1/locations/6ae285d710664f36d5bdae9d/observations/6ae3e58e65bb2bbd74a1c2d7",
+			"time": 16,
+			"responseCode": {
+				"code": 403,
+				"name": "FORBIDDEN"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 403": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 403": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				16
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 403": true
+				}
+			]
+		},
+		{
+			"id": "af4538ac-0958-43b5-88f1-e40933f960be",
+			"name": "Location stats",
+			"url": "http://127.0.0.1:5001/api/v1/locations/6ae285d710664f36d5bdae9d/stats",
+			"time": 21,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 200": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 200": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				21
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 200": true
+				}
+			]
+		},
+		{
+			"id": "a1d432fe-3fc4-462d-9c9e-4e3d94a1e6c3",
+			"name": "Forecast accuracy",
+			"url": "http://127.0.0.1:5001/api/v1/locations/6ae285d710664f36d5bdae9d/accuracy",
+			"time": 30,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 200": true,
+				"Has accuracy fields": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 200": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Has accuracy fields": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				30
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 200": true,
+					"Has accuracy fields": true
+				}
+			]
+		},
+		{
+			"id": "e91dcc16-489a-41ae-9a31-522916d56623",
+			"name": "Hottest cities",
+			"url": "http://127.0.0.1:5001/api/v1/analytics/hottest?limit=5",
+			"time": 14,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 200": true,
+				"Returns up to 5 cities": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 200": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Returns up to 5 cities": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				14
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 200": true,
+					"Returns up to 5 cities": true
+				}
+			]
+		},
+		{
+			"id": "3e2d91b3-1d5f-403f-84db-2dedd1b06b7c",
+			"name": "Rainiest cities",
+			"url": "http://127.0.0.1:5001/api/v1/analytics/rainiest?limit=5",
+			"time": 16,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 200": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 200": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				16
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 200": true
+				}
+			]
+		},
+		{
+			"id": "c2c1f4dd-43d0-4549-aece-e545ed857fbb",
+			"name": "Windiest cities",
+			"url": "http://127.0.0.1:5001/api/v1/analytics/windiest?limit=5",
+			"time": 12,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 200": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 200": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				12
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 200": true
+				}
+			]
+		},
+		{
+			"id": "9ec8af4c-d4f1-4d80-bbf1-1ba563087324",
+			"name": "Hottest in UK",
+			"url": "http://127.0.0.1:5001/api/v1/analytics/hottest?country=UK",
+			"time": 8,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 200": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 200": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				8
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 200": true
+				}
+			]
+		},
+		{
+			"id": "fc49b3ad-28d5-4103-af3b-f30b049e8992",
+			"name": "Condition breakdown",
+			"url": "http://127.0.0.1:5001/api/v1/analytics/condition-breakdown",
+			"time": 13,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 200": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 200": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				13
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 200": true
+				}
+			]
+		},
+		{
+			"id": "b89fe2b8-aadb-49ea-8607-312691d72f78",
+			"name": "Stats invalid id",
+			"url": "http://127.0.0.1:5001/api/v1/locations/abc/stats",
+			"time": 6,
+			"responseCode": {
+				"code": 400,
+				"name": "BAD REQUEST"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 400": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 400": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				6
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 400": true
+				}
+			]
+		},
+		{
+			"id": "435184ff-a5cc-49c7-8d2f-1273552f04bd",
+			"name": "Track a city",
+			"url": "http://127.0.0.1:5001/api/v1/users/me/tracked/6ae285d710664f36d5bdae9d",
+			"time": 163,
+			"responseCode": {
+				"code": 201,
+				"name": "CREATED"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 201": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 201": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				163
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 201": true
+				}
+			]
+		},
+		{
+			"id": "c239e902-6dbb-41dd-8412-207b454a10f7",
+			"name": "My tracker dashboard",
+			"url": "http://127.0.0.1:5001/api/v1/users/me/tracker",
+			"time": 459,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 200": true,
+				"Shows tracked cities": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 200": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Shows tracked cities": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				459
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 200": true,
+					"Shows tracked cities": true
+				}
+			]
+		},
+		{
+			"id": "83b24bc1-63ac-4950-a753-53da78e20a0e",
+			"name": "Track without login",
+			"url": "http://127.0.0.1:5001/api/v1/users/me/tracked/6ae285d710664f36d5bdae9d",
+			"time": 25,
+			"responseCode": {
+				"code": 401,
+				"name": "UNAUTHORIZED"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 401": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 401": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				25
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 401": true
+				}
+			]
+		},
+		{
+			"id": "956044e6-c44f-400a-9419-3673b255d510",
+			"name": "Track invalid id",
+			"url": "http://127.0.0.1:5001/api/v1/users/me/tracked/abc",
+			"time": 9,
+			"responseCode": {
+				"code": 400,
+				"name": "BAD REQUEST"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 400": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 400": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				9
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 400": true
+				}
+			]
+		},
+		{
+			"id": "4afc734a-27a6-43b3-a334-7c1c87906e16",
+			"name": "Untrack a city",
+			"url": "http://127.0.0.1:5001/api/v1/users/me/tracked/6ae285d710664f36d5bdae9d",
+			"time": 13,
+			"responseCode": {
+				"code": 204,
+				"name": "NO CONTENT"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 204": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 204": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				13
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 204": true
+				}
+			]
+		},
+		{
+			"id": "139d5262-0df6-4872-aa28-180b9bf5c6d4",
+			"name": "Untrack again",
+			"url": "http://127.0.0.1:5001/api/v1/users/me/tracked/6ae285d710664f36d5bdae9d",
+			"time": 11,
+			"responseCode": {
+				"code": 404,
+				"name": "NOT FOUND"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 404": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 404": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				11
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 404": true
+				}
+			]
+		},
+		{
+			"id": "f4668c4c-f2b2-4c35-8f4b-74f6ff404917",
+			"name": "Create alert",
+			"url": "http://127.0.0.1:5001/api/v1/alerts",
+			"time": 14,
+			"responseCode": {
+				"code": 201,
+				"name": "CREATED"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 201": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 201": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				14
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 201": true
+				}
+			]
+		},
+		{
+			"id": "df74cf76-5c68-4774-b736-c30609cd62fb",
+			"name": "Create alert bad metric",
+			"url": "http://127.0.0.1:5001/api/v1/alerts",
+			"time": 9,
+			"responseCode": {
+				"code": 400,
+				"name": "BAD REQUEST"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 400": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 400": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				9
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 400": true
+				}
+			]
+		},
+		{
+			"id": "ef046439-7c7f-4ced-b0ec-982243a85c83",
+			"name": "List my alerts",
+			"url": "http://127.0.0.1:5001/api/v1/alerts",
+			"time": 11,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 200": true,
+				"Returns a list": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 200": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Returns a list": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				11
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 200": true,
+					"Returns a list": true
+				}
+			]
+		},
+		{
+			"id": "9af98ccb-f273-4bbc-8e31-9def02d78577",
+			"name": "Triggered alerts",
+			"url": "http://127.0.0.1:5001/api/v1/alerts/triggered",
+			"time": 32,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 200": true,
+				"Returns a list": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 200": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Returns a list": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				32
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 200": true,
+					"Returns a list": true
+				}
+			]
+		},
+		{
+			"id": "634dad28-f2a2-46e9-a8f5-75384b99b587",
+			"name": "Edit alert",
+			"url": "http://127.0.0.1:5001/api/v1/alerts/6ae3e59065bb2bbd74a1c2d8",
+			"time": 9,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 200": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 200": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				9
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 200": true
+				}
+			]
+		},
+		{
+			"id": "b0ad3ede-fc03-4175-ab90-c39afce607ce",
+			"name": "Delete alert",
+			"url": "http://127.0.0.1:5001/api/v1/alerts/6ae3e59065bb2bbd74a1c2d8",
+			"time": 16,
+			"responseCode": {
+				"code": 204,
+				"name": "NO CONTENT"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 204": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 204": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				16
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 204": true
+				}
+			]
+		},
+		{
+			"id": "2a87f105-f924-4a0a-8976-8b2987ac2eb5",
+			"name": "Delete alert again",
+			"url": "http://127.0.0.1:5001/api/v1/alerts/6ae3e59065bb2bbd74a1c2d8",
+			"time": 9,
+			"responseCode": {
+				"code": 404,
+				"name": "NOT FOUND"
+			},
+			"tests": {
+				"No server error": true,
+				"Responds in under 1 second": true,
+				"Status is 404": true
+			},
+			"testPassFailCounts": {
+				"No server error": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Responds in under 1 second": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Status is 404": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				9
+			],
+			"allTests": [
+				{
+					"No server error": true,
+					"Responds in under 1 second": true,
+					"Status is 404": true
+				}
+			]
+		}
+	],
+	"count": 1,
+	"totalTime": 2323,
+	"collection": {
+		"requests": [
+			{
+				"id": "ccbc9853-6138-485a-9eb8-913319a88449",
+				"method": "POST"
+			},
+			{
+				"id": "7756ea5b-6ede-4eaf-9556-d064faa10288",
+				"method": "POST"
+			},
+			{
+				"id": "460bd7e3-d8f1-469a-af1b-44a0f1262b57",
+				"method": "POST"
+			},
+			{
+				"id": "edf62890-048c-46d5-abf1-4f2531f1bdbe",
+				"method": "GET"
+			},
+			{
+				"id": "69452f56-f15a-4b37-ae06-762d67e9c86d",
+				"method": "GET"
+			},
+			{
+				"id": "1c56e252-2b7e-48cf-a17a-34f520f41238",
+				"method": "GET"
+			},
+			{
+				"id": "fed7f378-e583-4da7-9e11-e47a6421f14d",
+				"method": "GET"
+			},
+			{
+				"id": "01d32d44-1444-4826-a9f0-2f033a538975",
+				"method": "GET"
+			},
+			{
+				"id": "98f5df66-854c-464c-9af2-51c8a4013a42",
+				"method": "POST"
+			},
+			{
+				"id": "d3e9822f-aafa-444c-a30e-b6319fb269e3",
+				"method": "POST"
+			},
+			{
+				"id": "a02d3d39-55f3-44b0-ad04-e2d1a2038427",
+				"method": "POST"
+			},
+			{
+				"id": "76e58389-9d9c-4655-9597-25fb103033fb",
+				"method": "DELETE"
+			},
+			{
+				"id": "5b958d70-67e3-4a0d-821f-23fee520b1b9",
+				"method": "POST"
+			},
+			{
+				"id": "6406686f-c505-467f-a448-579087a46562",
+				"method": "POST"
+			},
+			{
+				"id": "36c32b4b-7026-40f0-986d-8ffb25e6af1c",
+				"method": "DELETE"
+			},
+			{
+				"id": "a922b08e-d853-4f9c-81c5-164f0d14aed0",
+				"method": "DELETE"
+			},
+			{
+				"id": "af4538ac-0958-43b5-88f1-e40933f960be",
+				"method": "GET"
+			},
+			{
+				"id": "a1d432fe-3fc4-462d-9c9e-4e3d94a1e6c3",
+				"method": "GET"
+			},
+			{
+				"id": "e91dcc16-489a-41ae-9a31-522916d56623",
+				"method": "GET"
+			},
+			{
+				"id": "3e2d91b3-1d5f-403f-84db-2dedd1b06b7c",
+				"method": "GET"
+			},
+			{
+				"id": "c2c1f4dd-43d0-4549-aece-e545ed857fbb",
+				"method": "GET"
+			},
+			{
+				"id": "9ec8af4c-d4f1-4d80-bbf1-1ba563087324",
+				"method": "GET"
+			},
+			{
+				"id": "fc49b3ad-28d5-4103-af3b-f30b049e8992",
+				"method": "GET"
+			},
+			{
+				"id": "b89fe2b8-aadb-49ea-8607-312691d72f78",
+				"method": "GET"
+			},
+			{
+				"id": "435184ff-a5cc-49c7-8d2f-1273552f04bd",
+				"method": "POST"
+			},
+			{
+				"id": "c239e902-6dbb-41dd-8412-207b454a10f7",
+				"method": "GET"
+			},
+			{
+				"id": "83b24bc1-63ac-4950-a753-53da78e20a0e",
+				"method": "POST"
+			},
+			{
+				"id": "956044e6-c44f-400a-9419-3673b255d510",
+				"method": "POST"
+			},
+			{
+				"id": "4afc734a-27a6-43b3-a334-7c1c87906e16",
+				"method": "DELETE"
+			},
+			{
+				"id": "139d5262-0df6-4872-aa28-180b9bf5c6d4",
+				"method": "DELETE"
+			},
+			{
+				"id": "f4668c4c-f2b2-4c35-8f4b-74f6ff404917",
+				"method": "POST"
+			},
+			{
+				"id": "df74cf76-5c68-4774-b736-c30609cd62fb",
+				"method": "POST"
+			},
+			{
+				"id": "ef046439-7c7f-4ced-b0ec-982243a85c83",
+				"method": "GET"
+			},
+			{
+				"id": "9af98ccb-f273-4bbc-8e31-9def02d78577",
+				"method": "GET"
+			},
+			{
+				"id": "634dad28-f2a2-46e9-a8f5-75384b99b587",
+				"method": "PUT"
+			},
+			{
+				"id": "b0ad3ede-fc03-4175-ab90-c39afce607ce",
+				"method": "DELETE"
+			},
+			{
+				"id": "2a87f105-f924-4a0a-8976-8b2987ac2eb5",
+				"method": "DELETE"
+			}
+		]
+	}
+}
