@@ -1,0 +1,52 @@
+<html><head><meta charset='utf-8'><title>Endpoint summary</title>
+
+<style>
+  body { font-family: Arial, sans-serif; margin: 24px; }
+  h1 { font-size: 20px; }
+  h2 { font-size: 14px; background: #eee; padding: 6px; margin-top: 28px; page-break-before: always; }
+  h2.first { page-break-before: auto; }
+  pre { font-family: Consolas, monospace; font-size: 10px; line-height: 1.35; white-space: pre-wrap; word-wrap: break-word; }
+  .ln { color: #888; user-select: none; }
+  table { border-collapse: collapse; width: 100%; font-size: 10px; }
+  th, td { border: 1px solid #999; padding: 4px; text-align: left; vertical-align: top; }
+  th { background: #ddd; }
+</style>
+
+</head><body>
+<h1>Weather Forecast Tracker API: endpoint summary</h1>
+<p>Base URL: http://127.0.0.1:5001/api/v1</p><table>
+<tr><th>#</th><th>Method</th><th>Endpoint</th><th>Auth</th><th>Description</th><th>Status codes</th></tr>
+<tr><td>1</td><td>POST</td><td>/auth/register</td><td>No</td><td>Create a user</td><td>201, 400, 409</td></tr>
+<tr><td>2</td><td>POST</td><td>/auth/login</td><td>No</td><td>Log in, returns a token</td><td>200, 401</td></tr>
+<tr><td>3</td><td>POST</td><td>/auth/logout</td><td>Yes</td><td>Blacklist the current token</td><td>200, 401</td></tr>
+<tr><td>4</td><td>GET</td><td>/locations</td><td>No</td><td>List cities with pagination, filters and text search</td><td>200, 400</td></tr>
+<tr><td>5</td><td>GET</td><td>/locations/nearby</td><td>No</td><td>Cities within `radius_km` of `lat` and `lng</td><td>200, 400</td></tr>
+<tr><td>6</td><td>GET</td><td>/locations/&lt;id&gt;</td><td>No</td><td>One city with all its data</td><td>200, 400, 404</td></tr>
+<tr><td>7</td><td>POST</td><td>/locations</td><td>Admin</td><td>Add a city</td><td>201, 400, 401, 403</td></tr>
+<tr><td>8</td><td>PUT</td><td>/locations/&lt;id&gt;</td><td>Admin</td><td>Update a city</td><td>200, 400, 401, 403, 404</td></tr>
+<tr><td>9</td><td>DELETE</td><td>/locations/&lt;id&gt;</td><td>Admin</td><td>Delete a city</td><td>204, 400, 401, 403, 404</td></tr>
+<tr><td>10</td><td>GET</td><td>/locations/&lt;id&gt;/forecasts</td><td>No</td><td>Forecasts, optional `from` and `to` dates</td><td>200, 400, 404</td></tr>
+<tr><td>11</td><td>GET</td><td>/locations/&lt;id&gt;/forecasts/&lt;fid&gt;</td><td>No</td><td>One forecast</td><td>200, 400, 404</td></tr>
+<tr><td>12</td><td>POST</td><td>/locations/&lt;id&gt;/forecasts</td><td>Admin</td><td>Add a forecast (one per date)</td><td>201, 400, 401, 403, 404, 409</td></tr>
+<tr><td>13</td><td>PUT</td><td>/locations/&lt;id&gt;/forecasts/&lt;fid&gt;</td><td>Admin</td><td>Update a forecast</td><td>200, 400, 401, 403, 404</td></tr>
+<tr><td>14</td><td>DELETE</td><td>/locations/&lt;id&gt;/forecasts/&lt;fid&gt;</td><td>Admin</td><td>Delete a forecast</td><td>204, 400, 401, 403, 404</td></tr>
+<tr><td>15</td><td>GET</td><td>/locations/&lt;id&gt;/observations</td><td>No</td><td>Observations, optional `user` filter</td><td>200, 400, 404</td></tr>
+<tr><td>16</td><td>GET</td><td>/locations/&lt;id&gt;/observations/&lt;oid&gt;</td><td>No</td><td>One observation</td><td>200, 400, 404</td></tr>
+<tr><td>17</td><td>POST</td><td>/locations/&lt;id&gt;/observations</td><td>Yes</td><td>Add an observation (one per user per date)</td><td>201, 400, 401, 404, 409</td></tr>
+<tr><td>18</td><td>PUT</td><td>/locations/&lt;id&gt;/observations/&lt;oid&gt;</td><td>Owner or admin</td><td>Update an observation</td><td>200, 400, 401, 403, 404</td></tr>
+<tr><td>19</td><td>DELETE</td><td>/locations/&lt;id&gt;/observations/&lt;oid&gt;</td><td>Owner or admin</td><td>Delete an observation</td><td>204, 400, 401, 403, 404</td></tr>
+<tr><td>20</td><td>GET</td><td>/locations/&lt;id&gt;/stats</td><td>No</td><td>Average, highest, lowest temperature and total rain for a date range</td><td>200, 400, 404</td></tr>
+<tr><td>21</td><td>GET</td><td>/locations/&lt;id&gt;/accuracy</td><td>No</td><td>Forecast versus observed temperature error</td><td>200, 400, 404</td></tr>
+<tr><td>22</td><td>GET</td><td>/analytics/hottest</td><td>No</td><td>Cities ranked by average maximum temperature</td><td>200, 400</td></tr>
+<tr><td>23</td><td>GET</td><td>/analytics/rainiest</td><td>No</td><td>Cities ranked by total rainfall</td><td>200, 400</td></tr>
+<tr><td>24</td><td>GET</td><td>/analytics/windiest</td><td>No</td><td>Cities ranked by average wind speed</td><td>200, 400</td></tr>
+<tr><td>25</td><td>GET</td><td>/analytics/condition-breakdown</td><td>No</td><td>Share of days per weather condition</td><td>200</td></tr>
+<tr><td>26</td><td>POST</td><td>/users/me/tracked/&lt;id&gt;</td><td>Yes</td><td>Follow a city</td><td>201, 400, 401, 404</td></tr>
+<tr><td>27</td><td>DELETE</td><td>/users/me/tracked/&lt;id&gt;</td><td>Yes</td><td>Unfollow a city</td><td>204, 400, 401, 404</td></tr>
+<tr><td>28</td><td>GET</td><td>/users/me/tracker</td><td>Yes</td><td>Dashboard of followed cities with next forecast and alerts</td><td>200, 401, 404</td></tr>
+<tr><td>29</td><td>POST</td><td>/alerts</td><td>Yes</td><td>Create an alert</td><td>201, 400, 401, 404</td></tr>
+<tr><td>30</td><td>GET</td><td>/alerts</td><td>Yes</td><td>List my alerts</td><td>200, 401</td></tr>
+<tr><td>31</td><td>PUT</td><td>/alerts/&lt;id&gt;</td><td>Yes</td><td>Update one of my alerts</td><td>200, 400, 401, 404</td></tr>
+<tr><td>32</td><td>DELETE</td><td>/alerts/&lt;id&gt;</td><td>Yes</td><td>Delete one of my alerts</td><td>204, 400, 401, 404</td></tr>
+<tr><td>33</td><td>GET</td><td>/alerts/triggered</td><td>Yes</td><td>My active alerts matched by an upcoming forecast</td><td>200, 401</td></tr>
+</table></body></html>

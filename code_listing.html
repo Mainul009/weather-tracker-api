@@ -1,0 +1,1058 @@
+<html><head><meta charset='utf-8'><title>Code listing</title>
+
+<style>
+  body { font-family: Arial, sans-serif; margin: 24px; }
+  h1 { font-size: 20px; }
+  h2 { font-size: 14px; background: #eee; padding: 6px; margin-top: 28px; page-break-before: always; }
+  h2.first { page-break-before: auto; }
+  pre { font-family: Consolas, monospace; font-size: 10px; line-height: 1.35; white-space: pre-wrap; word-wrap: break-word; }
+  .ln { color: #888; user-select: none; }
+  table { border-collapse: collapse; width: 100%; font-size: 10px; }
+  th, td { border: 1px solid #999; padding: 4px; text-align: left; vertical-align: top; }
+  th { background: #ddd; }
+</style>
+
+</head><body>
+<h1>Weather Forecast Tracker API: complete code listing</h1>
+<h2 class='first'>app.py (52 lines)</h2><pre>
+<span class='ln'>   1  </span>import os
+<span class='ln'>   2  </span>from flask import Flask, jsonify
+<span class='ln'>   3  </span>from flask_cors import CORS
+<span class='ln'>   4  </span>from db import create_indexes
+<span class='ln'>   5  </span>from blueprints.auth import auth_bp
+<span class='ln'>   6  </span>from blueprints.locations import locations_bp
+<span class='ln'>   7  </span>from blueprints.forecasts import forecasts_bp
+<span class='ln'>   8  </span>from blueprints.observations import observations_bp
+<span class='ln'>   9  </span>from blueprints.analytics import analytics_bp
+<span class='ln'>  10  </span>from blueprints.tracker import tracker_bp
+<span class='ln'>  11  </span>from blueprints.alerts import alerts_bp
+<span class='ln'>  12  </span>
+<span class='ln'>  13  </span>
+<span class='ln'>  14  </span>def create_app():
+<span class='ln'>  15  </span>    app = Flask(__name__)
+<span class='ln'>  16  </span>    CORS(app)
+<span class='ln'>  17  </span>
+<span class='ln'>  18  </span>    for bp in (
+<span class='ln'>  19  </span>        auth_bp,
+<span class='ln'>  20  </span>        locations_bp,
+<span class='ln'>  21  </span>        forecasts_bp,
+<span class='ln'>  22  </span>        observations_bp,
+<span class='ln'>  23  </span>        analytics_bp,
+<span class='ln'>  24  </span>        tracker_bp,
+<span class='ln'>  25  </span>        alerts_bp,
+<span class='ln'>  26  </span>    ):
+<span class='ln'>  27  </span>        app.register_blueprint(bp, url_prefix=&quot;/api/v1&quot;)
+<span class='ln'>  28  </span>
+<span class='ln'>  29  </span>    @app.errorhandler(404)
+<span class='ln'>  30  </span>    def not_found(e):
+<span class='ln'>  31  </span>        return jsonify({&quot;error&quot;: &quot;Resource not found&quot;}), 404
+<span class='ln'>  32  </span>
+<span class='ln'>  33  </span>    @app.errorhandler(405)
+<span class='ln'>  34  </span>    def bad_method(e):
+<span class='ln'>  35  </span>        return jsonify({&quot;error&quot;: &quot;Method not allowed&quot;}), 405
+<span class='ln'>  36  </span>
+<span class='ln'>  37  </span>    @app.errorhandler(500)
+<span class='ln'>  38  </span>    def server_error(e):
+<span class='ln'>  39  </span>        return jsonify({&quot;error&quot;: &quot;Internal server error&quot;}), 500
+<span class='ln'>  40  </span>
+<span class='ln'>  41  </span>    return app
+<span class='ln'>  42  </span>
+<span class='ln'>  43  </span>
+<span class='ln'>  44  </span>if __name__ == &quot;__main__&quot;:
+<span class='ln'>  45  </span>    create_indexes()
+<span class='ln'>  46  </span>    app = create_app()
+<span class='ln'>  47  </span>    app.run(
+<span class='ln'>  48  </span>        host=&quot;0.0.0.0&quot;,
+<span class='ln'>  49  </span>        port=int(os.getenv(&quot;PORT&quot;, &quot;5000&quot;)),
+<span class='ln'>  50  </span>        debug=os.getenv(&quot;FLASK_DEBUG&quot;, &quot;False&quot;).lower() == &quot;true&quot;,
+<span class='ln'>  51  </span>        use_reloader=False,
+<span class='ln'>  52  </span>    )
+</pre>
+<h2 class=''>blueprints/__init__.py (0 lines)</h2><pre>
+</pre>
+<h2 class=''>blueprints/alerts.py (107 lines)</h2><pre>
+<span class='ln'>   1  </span>from datetime import date, datetime, timezone
+<span class='ln'>   2  </span>from flask import Blueprint, request, jsonify, g
+<span class='ln'>   3  </span>from db import alerts, locations
+<span class='ln'>   4  </span>from utils import to_oid, serialize
+<span class='ln'>   5  </span>from decorators import jwt_required
+<span class='ln'>   6  </span>
+<span class='ln'>   7  </span>alerts_bp = Blueprint(&quot;alerts&quot;, __name__)
+<span class='ln'>   8  </span>METRICS = {&quot;temp_max&quot;, &quot;temp_min&quot;, &quot;precip_mm&quot;, &quot;wind_kph&quot;, &quot;humidity&quot;}
+<span class='ln'>   9  </span>OPERATORS = {&quot;gt&quot;, &quot;lt&quot;}          # gt = greater than, lt = less than
+<span class='ln'>  10  </span>
+<span class='ln'>  11  </span>
+<span class='ln'>  12  </span>def validate_alert(d, partial=False):
+<span class='ln'>  13  </span>    if not isinstance(d, dict):
+<span class='ln'>  14  </span>        return {&quot;body&quot;: &quot;must be a JSON object&quot;}
+<span class='ln'>  15  </span>    errors = {}
+<span class='ln'>  16  </span>    if not partial:
+<span class='ln'>  17  </span>        for k in (&quot;location_id&quot;, &quot;metric&quot;, &quot;operator&quot;, &quot;threshold&quot;):
+<span class='ln'>  18  </span>            if k not in d:
+<span class='ln'>  19  </span>                errors[k] = &quot;is required&quot;
+<span class='ln'>  20  </span>    if &quot;metric&quot; in d and d[&quot;metric&quot;] not in METRICS:
+<span class='ln'>  21  </span>        errors[&quot;metric&quot;] = f&quot;must be one of {sorted(METRICS)}&quot;
+<span class='ln'>  22  </span>    if &quot;operator&quot; in d and d[&quot;operator&quot;] not in OPERATORS:
+<span class='ln'>  23  </span>        errors[&quot;operator&quot;] = &quot;must be &#x27;gt&#x27; or &#x27;lt&#x27;&quot;
+<span class='ln'>  24  </span>    if &quot;threshold&quot; in d and (isinstance(d[&quot;threshold&quot;], bool)
+<span class='ln'>  25  </span>                             or not isinstance(d[&quot;threshold&quot;], (int, float))):
+<span class='ln'>  26  </span>        errors[&quot;threshold&quot;] = &quot;must be a number&quot;
+<span class='ln'>  27  </span>    if &quot;active&quot; in d and not isinstance(d[&quot;active&quot;], bool):
+<span class='ln'>  28  </span>        errors[&quot;active&quot;] = &quot;must be true or false&quot;
+<span class='ln'>  29  </span>    return errors
+<span class='ln'>  30  </span>
+<span class='ln'>  31  </span>
+<span class='ln'>  32  </span>@alerts_bp.route(&quot;/alerts&quot;, methods=[&quot;POST&quot;])
+<span class='ln'>  33  </span>@jwt_required
+<span class='ln'>  34  </span>def create_alert():
+<span class='ln'>  35  </span>    d = request.get_json(silent=True)
+<span class='ln'>  36  </span>    errors = validate_alert(d)
+<span class='ln'>  37  </span>    lid = to_oid(d.get(&quot;location_id&quot;)) if isinstance(d, dict) else None
+<span class='ln'>  38  </span>    if isinstance(d, dict) and &quot;location_id&quot; in d and not lid:
+<span class='ln'>  39  </span>        errors[&quot;location_id&quot;] = &quot;is not a valid id&quot;
+<span class='ln'>  40  </span>    if errors:
+<span class='ln'>  41  </span>        return jsonify({&quot;error&quot;: &quot;Validation failed&quot;, &quot;details&quot;: errors}), 400
+<span class='ln'>  42  </span>    if locations.count_documents({&quot;_id&quot;: lid}) == 0:
+<span class='ln'>  43  </span>        return jsonify({&quot;error&quot;: &quot;Location not found&quot;}), 404
+<span class='ln'>  44  </span>
+<span class='ln'>  45  </span>    doc = {&quot;user&quot;: g.user[&quot;sub&quot;], &quot;location_id&quot;: lid, &quot;metric&quot;: d[&quot;metric&quot;],
+<span class='ln'>  46  </span>           &quot;operator&quot;: d[&quot;operator&quot;], &quot;threshold&quot;: d[&quot;threshold&quot;], &quot;active&quot;: True,
+<span class='ln'>  47  </span>           &quot;created&quot;: datetime.now(timezone.utc)}
+<span class='ln'>  48  </span>    new_id = alerts.insert_one(doc).inserted_id
+<span class='ln'>  49  </span>    return jsonify({&quot;id&quot;: str(new_id), &quot;url&quot;: f&quot;/api/v1/alerts/{new_id}&quot;}), 201
+<span class='ln'>  50  </span>
+<span class='ln'>  51  </span>
+<span class='ln'>  52  </span>@alerts_bp.route(&quot;/alerts&quot;, methods=[&quot;GET&quot;])
+<span class='ln'>  53  </span>@jwt_required
+<span class='ln'>  54  </span>def list_alerts():
+<span class='ln'>  55  </span>    return jsonify(serialize(list(alerts.find({&quot;user&quot;: g.user[&quot;sub&quot;]})))), 200
+<span class='ln'>  56  </span>
+<span class='ln'>  57  </span>
+<span class='ln'>  58  </span>@alerts_bp.route(&quot;/alerts/&lt;aid&gt;&quot;, methods=[&quot;PUT&quot;])
+<span class='ln'>  59  </span>@jwt_required
+<span class='ln'>  60  </span>def edit_alert(aid):
+<span class='ln'>  61  </span>    a = to_oid(aid)
+<span class='ln'>  62  </span>    if not a:
+<span class='ln'>  63  </span>        return jsonify({&quot;error&quot;: &quot;Invalid alert id&quot;}), 400
+<span class='ln'>  64  </span>    d = request.get_json(silent=True)
+<span class='ln'>  65  </span>    errors = validate_alert(d, partial=True)
+<span class='ln'>  66  </span>    upd = {k: v for k, v in (d or {}).items()
+<span class='ln'>  67  </span>           if k in (&quot;metric&quot;, &quot;operator&quot;, &quot;threshold&quot;, &quot;active&quot;)}
+<span class='ln'>  68  </span>    if errors or not upd:
+<span class='ln'>  69  </span>        return jsonify({&quot;error&quot;: &quot;Validation failed&quot;,
+<span class='ln'>  70  </span>                        &quot;details&quot;: errors or {&quot;body&quot;: &quot;no updatable fields&quot;}}), 400
+<span class='ln'>  71  </span>    # filtering by user means you can only change your own alerts
+<span class='ln'>  72  </span>    r = alerts.update_one({&quot;_id&quot;: a, &quot;user&quot;: g.user[&quot;sub&quot;]}, {&quot;$set&quot;: upd})
+<span class='ln'>  73  </span>    if r.matched_count == 0:
+<span class='ln'>  74  </span>        return jsonify({&quot;error&quot;: &quot;Alert not found&quot;}), 404
+<span class='ln'>  75  </span>    return jsonify({&quot;message&quot;: &quot;Alert updated&quot;}), 200
+<span class='ln'>  76  </span>
+<span class='ln'>  77  </span>
+<span class='ln'>  78  </span>@alerts_bp.route(&quot;/alerts/&lt;aid&gt;&quot;, methods=[&quot;DELETE&quot;])
+<span class='ln'>  79  </span>@jwt_required
+<span class='ln'>  80  </span>def delete_alert(aid):
+<span class='ln'>  81  </span>    a = to_oid(aid)
+<span class='ln'>  82  </span>    if not a:
+<span class='ln'>  83  </span>        return jsonify({&quot;error&quot;: &quot;Invalid alert id&quot;}), 400
+<span class='ln'>  84  </span>    if alerts.delete_one({&quot;_id&quot;: a, &quot;user&quot;: g.user[&quot;sub&quot;]}).deleted_count == 0:
+<span class='ln'>  85  </span>        return jsonify({&quot;error&quot;: &quot;Alert not found&quot;}), 404
+<span class='ln'>  86  </span>    return &quot;&quot;, 204
+<span class='ln'>  87  </span>
+<span class='ln'>  88  </span>
+<span class='ln'>  89  </span>@alerts_bp.route(&quot;/alerts/triggered&quot;, methods=[&quot;GET&quot;])
+<span class='ln'>  90  </span>@jwt_required
+<span class='ln'>  91  </span>def triggered():
+<span class='ln'>  92  </span>    &quot;&quot;&quot;Active alerts whose condition is met by an upcoming forecast.&quot;&quot;&quot;
+<span class='ln'>  93  </span>    today, out = date.today().isoformat(), []
+<span class='ln'>  94  </span>    for a in alerts.find({&quot;user&quot;: g.user[&quot;sub&quot;], &quot;active&quot;: True}):
+<span class='ln'>  95  </span>        loc = locations.find_one({&quot;_id&quot;: a[&quot;location_id&quot;]}, {&quot;name&quot;: 1, &quot;forecasts&quot;: 1})
+<span class='ln'>  96  </span>        if not loc:
+<span class='ln'>  97  </span>            continue
+<span class='ln'>  98  </span>        for f in loc[&quot;forecasts&quot;]:
+<span class='ln'>  99  </span>            v = f.get(a[&quot;metric&quot;])
+<span class='ln'> 100  </span>            if v is None or f[&quot;date&quot;] &lt; today:
+<span class='ln'> 101  </span>                continue
+<span class='ln'> 102  </span>            hit = v &gt; a[&quot;threshold&quot;] if a[&quot;operator&quot;] == &quot;gt&quot; else v &lt; a[&quot;threshold&quot;]
+<span class='ln'> 103  </span>            if hit:
+<span class='ln'> 104  </span>                out.append({&quot;alert_id&quot;: a[&quot;_id&quot;], &quot;location&quot;: loc[&quot;name&quot;], &quot;date&quot;: f[&quot;date&quot;],
+<span class='ln'> 105  </span>                            &quot;metric&quot;: a[&quot;metric&quot;], &quot;value&quot;: v,
+<span class='ln'> 106  </span>                            &quot;operator&quot;: a[&quot;operator&quot;], &quot;threshold&quot;: a[&quot;threshold&quot;]})
+<span class='ln'> 107  </span>    return jsonify(serialize(sorted(out, key=lambda x: x[&quot;date&quot;]))), 200
+</pre>
+<h2 class=''>blueprints/analytics.py (109 lines)</h2><pre>
+<span class='ln'>   1  </span>from flask import Blueprint, request, jsonify
+<span class='ln'>   2  </span>from db import locations
+<span class='ln'>   3  </span>from utils import to_oid, serialize
+<span class='ln'>   4  </span>
+<span class='ln'>   5  </span>analytics_bp = Blueprint(&quot;analytics&quot;, __name__)
+<span class='ln'>   6  </span>
+<span class='ln'>   7  </span>
+<span class='ln'>   8  </span>@analytics_bp.route(&quot;/locations/&lt;lid&gt;/stats&quot;, methods=[&quot;GET&quot;])
+<span class='ln'>   9  </span>def stats(lid):
+<span class='ln'>  10  </span>    &quot;&quot;&quot;Average, highest, lowest temperature and total rain for a date range.&quot;&quot;&quot;
+<span class='ln'>  11  </span>    oid = to_oid(lid)
+<span class='ln'>  12  </span>    if not oid:
+<span class='ln'>  13  </span>        return jsonify({&quot;error&quot;: &quot;Invalid location id&quot;}), 400
+<span class='ln'>  14  </span>    start = request.args.get(&quot;from&quot;, &quot;0000-01-01&quot;)
+<span class='ln'>  15  </span>    end = request.args.get(&quot;to&quot;, &quot;9999-12-31&quot;)
+<span class='ln'>  16  </span>
+<span class='ln'>  17  </span>    res = list(locations.aggregate([
+<span class='ln'>  18  </span>        {&quot;$match&quot;: {&quot;_id&quot;: oid}},                                  # pick the city
+<span class='ln'>  19  </span>        {&quot;$unwind&quot;: &quot;$forecasts&quot;},                                 # one row per forecast day
+<span class='ln'>  20  </span>        {&quot;$match&quot;: {&quot;forecasts.date&quot;: {&quot;$gte&quot;: start, &quot;$lte&quot;: end}}},
+<span class='ln'>  21  </span>        {&quot;$group&quot;: {&quot;_id&quot;: &quot;$_id&quot;, &quot;name&quot;: {&quot;$first&quot;: &quot;$name&quot;},    # combine the rows
+<span class='ln'>  22  </span>                    &quot;avg_max_c&quot;: {&quot;$avg&quot;: &quot;$forecasts.temp_max&quot;},
+<span class='ln'>  23  </span>                    &quot;highest_c&quot;: {&quot;$max&quot;: &quot;$forecasts.temp_max&quot;},
+<span class='ln'>  24  </span>                    &quot;lowest_c&quot;: {&quot;$min&quot;: &quot;$forecasts.temp_min&quot;},
+<span class='ln'>  25  </span>                    &quot;total_rain_mm&quot;: {&quot;$sum&quot;: &quot;$forecasts.precip_mm&quot;},
+<span class='ln'>  26  </span>                    &quot;max_wind_kph&quot;: {&quot;$max&quot;: &quot;$forecasts.wind_kph&quot;},
+<span class='ln'>  27  </span>                    &quot;days&quot;: {&quot;$sum&quot;: 1}}}]))
+<span class='ln'>  28  </span>    if not res:
+<span class='ln'>  29  </span>        return jsonify({&quot;error&quot;: &quot;No data for that location/range&quot;}), 404
+<span class='ln'>  30  </span>    return jsonify(serialize(res[0])), 200
+<span class='ln'>  31  </span>
+<span class='ln'>  32  </span>
+<span class='ln'>  33  </span>@analytics_bp.route(&quot;/locations/&lt;lid&gt;/accuracy&quot;, methods=[&quot;GET&quot;])
+<span class='ln'>  34  </span>def accuracy(lid):
+<span class='ln'>  35  </span>    &quot;&quot;&quot;Compares each forecast with the observation for the same date.&quot;&quot;&quot;
+<span class='ln'>  36  </span>    oid = to_oid(lid)
+<span class='ln'>  37  </span>    if not oid:
+<span class='ln'>  38  </span>        return jsonify({&quot;error&quot;: &quot;Invalid location id&quot;}), 400
+<span class='ln'>  39  </span>
+<span class='ln'>  40  </span>    res = list(locations.aggregate([
+<span class='ln'>  41  </span>        {&quot;$match&quot;: {&quot;_id&quot;: oid}},
+<span class='ln'>  42  </span>        {&quot;$unwind&quot;: &quot;$forecasts&quot;},                                 # one row per forecast
+<span class='ln'>  43  </span>        # find the observation with the same date, inside the same city
+<span class='ln'>  44  </span>        {&quot;$set&quot;: {&quot;obs&quot;: {&quot;$first&quot;: {&quot;$filter&quot;: {
+<span class='ln'>  45  </span>            &quot;input&quot;: &quot;$observations&quot;, &quot;as&quot;: &quot;o&quot;,
+<span class='ln'>  46  </span>            &quot;cond&quot;: {&quot;$eq&quot;: [&quot;$$o.date&quot;, &quot;$forecasts.date&quot;]}}}}}},
+<span class='ln'>  47  </span>        {&quot;$match&quot;: {&quot;obs&quot;: {&quot;$exists&quot;: True}}},                    # keep days that have both
+<span class='ln'>  48  </span>        {&quot;$set&quot;: {&quot;err&quot;: {&quot;$abs&quot;: {&quot;$subtract&quot;: [&quot;$forecasts.temp_max&quot;, &quot;$obs.temp_max&quot;]}}}},
+<span class='ln'>  49  </span>        {&quot;$group&quot;: {&quot;_id&quot;: &quot;$_id&quot;, &quot;name&quot;: {&quot;$first&quot;: &quot;$name&quot;},
+<span class='ln'>  50  </span>                    &quot;days_compared&quot;: {&quot;$sum&quot;: 1},
+<span class='ln'>  51  </span>                    &quot;mean_abs_error_c&quot;: {&quot;$avg&quot;: &quot;$err&quot;},
+<span class='ln'>  52  </span>                    &quot;worst_error_c&quot;: {&quot;$max&quot;: &quot;$err&quot;},
+<span class='ln'>  53  </span>                    &quot;within_2c&quot;: {&quot;$sum&quot;: {&quot;$cond&quot;: [{&quot;$lte&quot;: [&quot;$err&quot;, 2]}, 1, 0]}}}},
+<span class='ln'>  54  </span>        {&quot;$set&quot;: {&quot;mean_abs_error_c&quot;: {&quot;$round&quot;: [&quot;$mean_abs_error_c&quot;, 2]},
+<span class='ln'>  55  </span>                  &quot;pct_within_2c&quot;: {&quot;$round&quot;: [
+<span class='ln'>  56  </span>                      {&quot;$multiply&quot;: [{&quot;$divide&quot;: [&quot;$within_2c&quot;, &quot;$days_compared&quot;]}, 100]}, 1]}}}]))
+<span class='ln'>  57  </span>    if not res:
+<span class='ln'>  58  </span>        return jsonify({&quot;error&quot;: &quot;No overlapping forecast/observation dates&quot;}), 404
+<span class='ln'>  59  </span>    return jsonify(serialize(res[0])), 200
+<span class='ln'>  60  </span>
+<span class='ln'>  61  </span>
+<span class='ln'>  62  </span>def ranking(field):
+<span class='ln'>  63  </span>    &quot;&quot;&quot;Shared by hottest, rainiest and windiest.&quot;&quot;&quot;
+<span class='ln'>  64  </span>    try:
+<span class='ln'>  65  </span>        limit = min(max(int(request.args.get(&quot;limit&quot;, 10)), 1), 50)
+<span class='ln'>  66  </span>    except ValueError:
+<span class='ln'>  67  </span>        return jsonify({&quot;error&quot;: &quot;limit must be an integer&quot;}), 400
+<span class='ln'>  68  </span>    match = {&quot;country&quot;: request.args[&quot;country&quot;]} if request.args.get(&quot;country&quot;) else {}
+<span class='ln'>  69  </span>    op = &quot;$sum&quot; if field == &quot;precip_mm&quot; else &quot;$avg&quot;
+<span class='ln'>  70  </span>    res = locations.aggregate([
+<span class='ln'>  71  </span>        {&quot;$match&quot;: match},
+<span class='ln'>  72  </span>        {&quot;$unwind&quot;: &quot;$forecasts&quot;},
+<span class='ln'>  73  </span>        {&quot;$group&quot;: {&quot;_id&quot;: &quot;$_id&quot;, &quot;name&quot;: {&quot;$first&quot;: &quot;$name&quot;},
+<span class='ln'>  74  </span>                    &quot;country&quot;: {&quot;$first&quot;: &quot;$country&quot;},
+<span class='ln'>  75  </span>                    &quot;value&quot;: {op: f&quot;$forecasts.{field}&quot;}}},
+<span class='ln'>  76  </span>        {&quot;$sort&quot;: {&quot;value&quot;: -1}},
+<span class='ln'>  77  </span>        {&quot;$limit&quot;: limit}])
+<span class='ln'>  78  </span>    return jsonify(serialize(list(res))), 200
+<span class='ln'>  79  </span>
+<span class='ln'>  80  </span>
+<span class='ln'>  81  </span>@analytics_bp.route(&quot;/analytics/hottest&quot;, methods=[&quot;GET&quot;])
+<span class='ln'>  82  </span>def hottest():
+<span class='ln'>  83  </span>    return ranking(&quot;temp_max&quot;)
+<span class='ln'>  84  </span>
+<span class='ln'>  85  </span>
+<span class='ln'>  86  </span>@analytics_bp.route(&quot;/analytics/rainiest&quot;, methods=[&quot;GET&quot;])
+<span class='ln'>  87  </span>def rainiest():
+<span class='ln'>  88  </span>    return ranking(&quot;precip_mm&quot;)
+<span class='ln'>  89  </span>
+<span class='ln'>  90  </span>
+<span class='ln'>  91  </span>@analytics_bp.route(&quot;/analytics/windiest&quot;, methods=[&quot;GET&quot;])
+<span class='ln'>  92  </span>def windiest():
+<span class='ln'>  93  </span>    return ranking(&quot;wind_kph&quot;)
+<span class='ln'>  94  </span>
+<span class='ln'>  95  </span>
+<span class='ln'>  96  </span>@analytics_bp.route(&quot;/analytics/condition-breakdown&quot;, methods=[&quot;GET&quot;])
+<span class='ln'>  97  </span>def condition_breakdown():
+<span class='ln'>  98  </span>    &quot;&quot;&quot;What percentage of all forecast days are Rain, Clear, and so on.&quot;&quot;&quot;
+<span class='ln'>  99  </span>    res = list(locations.aggregate([
+<span class='ln'> 100  </span>        {&quot;$unwind&quot;: &quot;$forecasts&quot;},
+<span class='ln'> 101  </span>        {&quot;$group&quot;: {&quot;_id&quot;: &quot;$forecasts.condition&quot;, &quot;days&quot;: {&quot;$sum&quot;: 1}}},
+<span class='ln'> 102  </span>        {&quot;$group&quot;: {&quot;_id&quot;: None, &quot;total&quot;: {&quot;$sum&quot;: &quot;$days&quot;},
+<span class='ln'> 103  </span>                    &quot;items&quot;: {&quot;$push&quot;: {&quot;condition&quot;: &quot;$_id&quot;, &quot;days&quot;: &quot;$days&quot;}}}},
+<span class='ln'> 104  </span>        {&quot;$unwind&quot;: &quot;$items&quot;},
+<span class='ln'> 105  </span>        {&quot;$project&quot;: {&quot;_id&quot;: 0, &quot;condition&quot;: &quot;$items.condition&quot;, &quot;days&quot;: &quot;$items.days&quot;,
+<span class='ln'> 106  </span>                      &quot;percent&quot;: {&quot;$round&quot;: [
+<span class='ln'> 107  </span>                          {&quot;$multiply&quot;: [{&quot;$divide&quot;: [&quot;$items.days&quot;, &quot;$total&quot;]}, 100]}, 1]}}},
+<span class='ln'> 108  </span>        {&quot;$sort&quot;: {&quot;days&quot;: -1}}]))
+<span class='ln'> 109  </span>    return jsonify(res), 200
+</pre>
+<h2 class=''>blueprints/auth.py (61 lines)</h2><pre>
+<span class='ln'>   1  </span>from flask import Blueprint
+<span class='ln'>   2  </span>auth_bp = Blueprint(&quot;auth&quot;, __name__)
+<span class='ln'>   3  </span>
+<span class='ln'>   4  </span>import re
+<span class='ln'>   5  </span>import bcrypt
+<span class='ln'>   6  </span>import jwt
+<span class='ln'>   7  </span>from datetime import datetime, timedelta, timezone
+<span class='ln'>   8  </span>from flask import Blueprint, request, jsonify, g
+<span class='ln'>   9  </span>from pymongo.errors import DuplicateKeyError
+<span class='ln'>  10  </span>from db import users, blacklist
+<span class='ln'>  11  </span>from config import SECRET_KEY, TOKEN_HOURS
+<span class='ln'>  12  </span>from decorators import jwt_required
+<span class='ln'>  13  </span>
+<span class='ln'>  14  </span>auth_bp = Blueprint(&quot;auth&quot;, __name__)
+<span class='ln'>  15  </span>EMAIL_RE = re.compile(r&quot;^[^@\s]+@[^@\s]+\.[^@\s]+$&quot;)
+<span class='ln'>  16  </span>
+<span class='ln'>  17  </span>
+<span class='ln'>  18  </span>@auth_bp.route(&quot;/auth/register&quot;, methods=[&quot;POST&quot;])
+<span class='ln'>  19  </span>def register():
+<span class='ln'>  20  </span>    data = request.get_json(silent=True) or {}
+<span class='ln'>  21  </span>    u, e, p = data.get(&quot;username&quot;), data.get(&quot;email&quot;), data.get(&quot;password&quot;)
+<span class='ln'>  22  </span>
+<span class='ln'>  23  </span>    errors = {}
+<span class='ln'>  24  </span>    if not isinstance(u, str) or not 3 &lt;= len(u) &lt;= 30 or not u.replace(&quot;_&quot;, &quot;&quot;).isalnum():
+<span class='ln'>  25  </span>        errors[&quot;username&quot;] = &quot;3-30 characters: letters, digits, underscore&quot;
+<span class='ln'>  26  </span>    if not isinstance(e, str) or not EMAIL_RE.match(e):
+<span class='ln'>  27  </span>        errors[&quot;email&quot;] = &quot;must be a valid email address&quot;
+<span class='ln'>  28  </span>    if not isinstance(p, str) or len(p) &lt; 8:
+<span class='ln'>  29  </span>        errors[&quot;password&quot;] = &quot;must be at least 8 characters&quot;
+<span class='ln'>  30  </span>    if errors:
+<span class='ln'>  31  </span>        return jsonify({&quot;error&quot;: &quot;Validation failed&quot;, &quot;details&quot;: errors}), 400
+<span class='ln'>  32  </span>
+<span class='ln'>  33  </span>    hashed = bcrypt.hashpw(p.encode(), bcrypt.gensalt())   # scrambles the password
+<span class='ln'>  34  </span>    try:
+<span class='ln'>  35  </span>        users.insert_one({&quot;username&quot;: u, &quot;email&quot;: e.lower(), &quot;password&quot;: hashed,
+<span class='ln'>  36  </span>                          &quot;role&quot;: &quot;user&quot;, &quot;tracked_locations&quot;: [], &quot;units&quot;: &quot;metric&quot;})
+<span class='ln'>  37  </span>    except DuplicateKeyError:
+<span class='ln'>  38  </span>        return jsonify({&quot;error&quot;: &quot;Username or email already exists&quot;}), 409
+<span class='ln'>  39  </span>    return jsonify({&quot;message&quot;: &quot;User registered&quot;}), 201
+<span class='ln'>  40  </span>
+<span class='ln'>  41  </span>
+<span class='ln'>  42  </span>@auth_bp.route(&quot;/auth/login&quot;, methods=[&quot;POST&quot;])
+<span class='ln'>  43  </span>def login():
+<span class='ln'>  44  </span>    data = request.get_json(silent=True) or {}
+<span class='ln'>  45  </span>    pw = data.get(&quot;password&quot;, &quot;&quot;)
+<span class='ln'>  46  </span>    user = users.find_one({&quot;username&quot;: data.get(&quot;username&quot;, &quot;&quot;)})
+<span class='ln'>  47  </span>    if not user or not isinstance(pw, str) or not bcrypt.checkpw(pw.encode(), user[&quot;password&quot;]):
+<span class='ln'>  48  </span>        return jsonify({&quot;error&quot;: &quot;Invalid username or password&quot;}), 401
+<span class='ln'>  49  </span>
+<span class='ln'>  50  </span>    expires = datetime.now(timezone.utc) + timedelta(hours=TOKEN_HOURS)
+<span class='ln'>  51  </span>    token = jwt.encode({&quot;sub&quot;: user[&quot;username&quot;], &quot;role&quot;: user[&quot;role&quot;], &quot;exp&quot;: expires},
+<span class='ln'>  52  </span>                       SECRET_KEY, algorithm=&quot;HS256&quot;)
+<span class='ln'>  53  </span>    return jsonify({&quot;token&quot;: token}), 200
+<span class='ln'>  54  </span>
+<span class='ln'>  55  </span>
+<span class='ln'>  56  </span>@auth_bp.route(&quot;/auth/logout&quot;, methods=[&quot;POST&quot;])
+<span class='ln'>  57  </span>@jwt_required
+<span class='ln'>  58  </span>def logout():
+<span class='ln'>  59  </span>    expires = datetime.fromtimestamp(g.user[&quot;exp&quot;], tz=timezone.utc)
+<span class='ln'>  60  </span>    blacklist.insert_one({&quot;token&quot;: g.token, &quot;expires&quot;: expires})
+<span class='ln'>  61  </span>    return jsonify({&quot;message&quot;: &quot;Logged out&quot;}), 200
+</pre>
+<h2 class=''>blueprints/forecasts.py (96 lines)</h2><pre>
+<span class='ln'>   1  </span>from bson import ObjectId
+<span class='ln'>   2  </span>from flask import Blueprint, request, jsonify
+<span class='ln'>   3  </span>from db import locations
+<span class='ln'>   4  </span>from utils import to_oid, serialize
+<span class='ln'>   5  </span>from validators import validate_forecast
+<span class='ln'>   6  </span>from decorators import admin_required
+<span class='ln'>   7  </span>
+<span class='ln'>   8  </span>forecasts_bp = Blueprint(&quot;forecasts&quot;, __name__)
+<span class='ln'>   9  </span>
+<span class='ln'>  10  </span>
+<span class='ln'>  11  </span>@forecasts_bp.route(&quot;/locations/&lt;lid&gt;/forecasts&quot;, methods=[&quot;GET&quot;])
+<span class='ln'>  12  </span>def list_forecasts(lid):
+<span class='ln'>  13  </span>    oid = to_oid(lid)
+<span class='ln'>  14  </span>    if not oid:
+<span class='ln'>  15  </span>        return jsonify({&quot;error&quot;: &quot;Invalid location id&quot;}), 400
+<span class='ln'>  16  </span>    start = request.args.get(&quot;from&quot;, &quot;0000-01-01&quot;)
+<span class='ln'>  17  </span>    end = request.args.get(&quot;to&quot;, &quot;9999-12-31&quot;)
+<span class='ln'>  18  </span>
+<span class='ln'>  19  </span>    # $filter keeps only the forecasts whose date is between &quot;from&quot; and &quot;to&quot;
+<span class='ln'>  20  </span>    res = list(locations.aggregate([
+<span class='ln'>  21  </span>        {&quot;$match&quot;: {&quot;_id&quot;: oid}},
+<span class='ln'>  22  </span>        {&quot;$project&quot;: {&quot;_id&quot;: 0, &quot;forecasts&quot;: {&quot;$filter&quot;: {
+<span class='ln'>  23  </span>            &quot;input&quot;: &quot;$forecasts&quot;, &quot;as&quot;: &quot;f&quot;,
+<span class='ln'>  24  </span>            &quot;cond&quot;: {&quot;$and&quot;: [{&quot;$gte&quot;: [&quot;$$f.date&quot;, start]},
+<span class='ln'>  25  </span>                              {&quot;$lte&quot;: [&quot;$$f.date&quot;, end]}]}}}}}]))
+<span class='ln'>  26  </span>    if not res:
+<span class='ln'>  27  </span>        return jsonify({&quot;error&quot;: &quot;Location not found&quot;}), 404
+<span class='ln'>  28  </span>    ordered = sorted(res[0][&quot;forecasts&quot;], key=lambda f: f[&quot;date&quot;])
+<span class='ln'>  29  </span>    return jsonify(serialize(ordered)), 200
+<span class='ln'>  30  </span>
+<span class='ln'>  31  </span>
+<span class='ln'>  32  </span>@forecasts_bp.route(&quot;/locations/&lt;lid&gt;/forecasts/&lt;fid&gt;&quot;, methods=[&quot;GET&quot;])
+<span class='ln'>  33  </span>def get_forecast(lid, fid):
+<span class='ln'>  34  </span>    l, f = to_oid(lid), to_oid(fid)
+<span class='ln'>  35  </span>    if not l or not f:
+<span class='ln'>  36  </span>        return jsonify({&quot;error&quot;: &quot;Invalid id&quot;}), 400
+<span class='ln'>  37  </span>    # &quot;forecasts.$&quot; returns only the one matching item from the list
+<span class='ln'>  38  </span>    doc = locations.find_one({&quot;_id&quot;: l, &quot;forecasts._id&quot;: f}, {&quot;forecasts.$&quot;: 1})
+<span class='ln'>  39  </span>    if not doc:
+<span class='ln'>  40  </span>        return jsonify({&quot;error&quot;: &quot;Forecast not found&quot;}), 404
+<span class='ln'>  41  </span>    return jsonify(serialize(doc[&quot;forecasts&quot;][0])), 200
+<span class='ln'>  42  </span>
+<span class='ln'>  43  </span>
+<span class='ln'>  44  </span>@forecasts_bp.route(&quot;/locations/&lt;lid&gt;/forecasts&quot;, methods=[&quot;POST&quot;])
+<span class='ln'>  45  </span>@admin_required
+<span class='ln'>  46  </span>def add_forecast(lid):
+<span class='ln'>  47  </span>    oid = to_oid(lid)
+<span class='ln'>  48  </span>    if not oid:
+<span class='ln'>  49  </span>        return jsonify({&quot;error&quot;: &quot;Invalid location id&quot;}), 400
+<span class='ln'>  50  </span>    d = request.get_json(silent=True)
+<span class='ln'>  51  </span>    errors = validate_forecast(d)
+<span class='ln'>  52  </span>    if errors:
+<span class='ln'>  53  </span>        return jsonify({&quot;error&quot;: &quot;Validation failed&quot;, &quot;details&quot;: errors}), 400
+<span class='ln'>  54  </span>
+<span class='ln'>  55  </span>    d[&quot;_id&quot;] = ObjectId()
+<span class='ln'>  56  </span>    # only adds the forecast if that date isn&#x27;t already in the list
+<span class='ln'>  57  </span>    r = locations.update_one({&quot;_id&quot;: oid, &quot;forecasts.date&quot;: {&quot;$ne&quot;: d[&quot;date&quot;]}},
+<span class='ln'>  58  </span>                             {&quot;$push&quot;: {&quot;forecasts&quot;: d}})
+<span class='ln'>  59  </span>    if r.matched_count == 0:
+<span class='ln'>  60  </span>        if locations.count_documents({&quot;_id&quot;: oid}) == 0:
+<span class='ln'>  61  </span>            return jsonify({&quot;error&quot;: &quot;Location not found&quot;}), 404
+<span class='ln'>  62  </span>        return jsonify({&quot;error&quot;: &quot;A forecast for that date already exists&quot;}), 409
+<span class='ln'>  63  </span>    return jsonify({&quot;id&quot;: str(d[&quot;_id&quot;]),
+<span class='ln'>  64  </span>                    &quot;url&quot;: f&quot;/api/v1/locations/{lid}/forecasts/{d[&#x27;_id&#x27;]}&quot;}), 201
+<span class='ln'>  65  </span>
+<span class='ln'>  66  </span>
+<span class='ln'>  67  </span>@forecasts_bp.route(&quot;/locations/&lt;lid&gt;/forecasts/&lt;fid&gt;&quot;, methods=[&quot;PUT&quot;])
+<span class='ln'>  68  </span>@admin_required
+<span class='ln'>  69  </span>def edit_forecast(lid, fid):
+<span class='ln'>  70  </span>    l, f = to_oid(lid), to_oid(fid)
+<span class='ln'>  71  </span>    if not l or not f:
+<span class='ln'>  72  </span>        return jsonify({&quot;error&quot;: &quot;Invalid id&quot;}), 400
+<span class='ln'>  73  </span>    d = request.get_json(silent=True)
+<span class='ln'>  74  </span>    errors = validate_forecast(d, partial=True)
+<span class='ln'>  75  </span>    if errors or not d:
+<span class='ln'>  76  </span>        return jsonify({&quot;error&quot;: &quot;Validation failed&quot;,
+<span class='ln'>  77  </span>                        &quot;details&quot;: errors or {&quot;body&quot;: &quot;cannot be empty&quot;}}), 400
+<span class='ln'>  78  </span>
+<span class='ln'>  79  </span>    # &quot;forecasts.$.field&quot; updates only the matching item in the list
+<span class='ln'>  80  </span>    upd = {f&quot;forecasts.$.{k}&quot;: v for k, v in d.items()}
+<span class='ln'>  81  </span>    r = locations.update_one({&quot;_id&quot;: l, &quot;forecasts._id&quot;: f}, {&quot;$set&quot;: upd})
+<span class='ln'>  82  </span>    if r.matched_count == 0:
+<span class='ln'>  83  </span>        return jsonify({&quot;error&quot;: &quot;Forecast not found&quot;}), 404
+<span class='ln'>  84  </span>    return jsonify({&quot;message&quot;: &quot;Forecast updated&quot;}), 200
+<span class='ln'>  85  </span>
+<span class='ln'>  86  </span>
+<span class='ln'>  87  </span>@forecasts_bp.route(&quot;/locations/&lt;lid&gt;/forecasts/&lt;fid&gt;&quot;, methods=[&quot;DELETE&quot;])
+<span class='ln'>  88  </span>@admin_required
+<span class='ln'>  89  </span>def delete_forecast(lid, fid):
+<span class='ln'>  90  </span>    l, f = to_oid(lid), to_oid(fid)
+<span class='ln'>  91  </span>    if not l or not f:
+<span class='ln'>  92  </span>        return jsonify({&quot;error&quot;: &quot;Invalid id&quot;}), 400
+<span class='ln'>  93  </span>    r = locations.update_one({&quot;_id&quot;: l}, {&quot;$pull&quot;: {&quot;forecasts&quot;: {&quot;_id&quot;: f}}})
+<span class='ln'>  94  </span>    if r.modified_count == 0:
+<span class='ln'>  95  </span>        return jsonify({&quot;error&quot;: &quot;Forecast not found&quot;}), 404
+<span class='ln'>  96  </span>    return &quot;&quot;, 204
+</pre>
+<h2 class=''>blueprints/locations.py (124 lines)</h2><pre>
+<span class='ln'>   1  </span>from flask import Blueprint, request, jsonify
+<span class='ln'>   2  </span>from db import locations
+<span class='ln'>   3  </span>from utils import to_oid, serialize, page_args
+<span class='ln'>   4  </span>from validators import validate_location
+<span class='ln'>   5  </span>from decorators import admin_required
+<span class='ln'>   6  </span>
+<span class='ln'>   7  </span>locations_bp = Blueprint(&quot;locations&quot;, __name__)
+<span class='ln'>   8  </span>LIST_PROJECTION = {&quot;forecasts&quot;: 0, &quot;observations&quot;: 0}   # keeps list responses small
+<span class='ln'>   9  </span>
+<span class='ln'>  10  </span>
+<span class='ln'>  11  </span>@locations_bp.route(&quot;/locations&quot;, methods=[&quot;GET&quot;])
+<span class='ln'>  12  </span>def list_locations():
+<span class='ln'>  13  </span>    pn, ps = page_args()
+<span class='ln'>  14  </span>    if pn is None:
+<span class='ln'>  15  </span>        return jsonify({&quot;error&quot;: &quot;pn and ps must be integers&quot;}), 400
+<span class='ln'>  16  </span>
+<span class='ln'>  17  </span>    a, q, elem = request.args, {}, {}
+<span class='ln'>  18  </span>    if a.get(&quot;country&quot;):
+<span class='ln'>  19  </span>        q[&quot;country&quot;] = a[&quot;country&quot;]
+<span class='ln'>  20  </span>    if a.get(&quot;region&quot;):
+<span class='ln'>  21  </span>        q[&quot;region&quot;] = a[&quot;region&quot;]
+<span class='ln'>  22  </span>    if a.get(&quot;tag&quot;):
+<span class='ln'>  23  </span>        q[&quot;tags&quot;] = {&quot;$in&quot;: a.getlist(&quot;tag&quot;)}          # ?tag=coastal&amp;tag=hot
+<span class='ln'>  24  </span>    if a.get(&quot;q&quot;):
+<span class='ln'>  25  </span>        q[&quot;$text&quot;] = {&quot;$search&quot;: a[&quot;q&quot;]}               # text search
+<span class='ln'>  26  </span>    try:
+<span class='ln'>  27  </span>        if a.get(&quot;min_temp&quot;):
+<span class='ln'>  28  </span>            elem[&quot;temp_max&quot;] = {&quot;$gte&quot;: float(a[&quot;min_temp&quot;])}
+<span class='ln'>  29  </span>        if a.get(&quot;max_temp&quot;):
+<span class='ln'>  30  </span>            elem.setdefault(&quot;temp_max&quot;, {})[&quot;$lte&quot;] = float(a[&quot;max_temp&quot;])
+<span class='ln'>  31  </span>    except ValueError:
+<span class='ln'>  32  </span>        return jsonify({&quot;error&quot;: &quot;min_temp and max_temp must be numbers&quot;}), 400
+<span class='ln'>  33  </span>    if a.get(&quot;condition&quot;):
+<span class='ln'>  34  </span>        elem[&quot;condition&quot;] = a[&quot;condition&quot;]
+<span class='ln'>  35  </span>    if a.get(&quot;date&quot;):
+<span class='ln'>  36  </span>        elem[&quot;date&quot;] = a[&quot;date&quot;]
+<span class='ln'>  37  </span>    if elem:
+<span class='ln'>  38  </span>        q[&quot;forecasts&quot;] = {&quot;$elemMatch&quot;: elem}   # all conditions must match the SAME forecast
+<span class='ln'>  39  </span>
+<span class='ln'>  40  </span>    sort_field = a.get(&quot;sort&quot;) if a.get(&quot;sort&quot;) in (&quot;name&quot;, &quot;country&quot;) else &quot;name&quot;
+<span class='ln'>  41  </span>    direction = -1 if a.get(&quot;order&quot;) == &quot;desc&quot; else 1
+<span class='ln'>  42  </span>
+<span class='ln'>  43  </span>    total = locations.count_documents(q)
+<span class='ln'>  44  </span>    cur = (locations.find(q, LIST_PROJECTION).sort(sort_field, direction)
+<span class='ln'>  45  </span>           .skip((pn - 1) * ps).limit(ps))
+<span class='ln'>  46  </span>    return jsonify({&quot;data&quot;: serialize(list(cur)), &quot;page&quot;: pn, &quot;page_size&quot;: ps,
+<span class='ln'>  47  </span>                    &quot;total&quot;: total, &quot;total_pages&quot;: -(-total // ps)}), 200
+<span class='ln'>  48  </span>
+<span class='ln'>  49  </span>
+<span class='ln'>  50  </span>@locations_bp.route(&quot;/locations/nearby&quot;, methods=[&quot;GET&quot;])
+<span class='ln'>  51  </span>def nearby():
+<span class='ln'>  52  </span>    try:
+<span class='ln'>  53  </span>        lat, lng = float(request.args[&quot;lat&quot;]), float(request.args[&quot;lng&quot;])
+<span class='ln'>  54  </span>        km = float(request.args.get(&quot;radius_km&quot;, 100))
+<span class='ln'>  55  </span>    except (KeyError, ValueError):
+<span class='ln'>  56  </span>        return jsonify({&quot;error&quot;: &quot;lat and lng are required numbers; radius_km must be a number&quot;}), 400
+<span class='ln'>  57  </span>    cur = locations.find({&quot;geo&quot;: {&quot;$near&quot;: {
+<span class='ln'>  58  </span>        &quot;$geometry&quot;: {&quot;type&quot;: &quot;Point&quot;, &quot;coordinates&quot;: [lng, lat]},
+<span class='ln'>  59  </span>        &quot;$maxDistance&quot;: km * 1000}}}, LIST_PROJECTION).limit(20)
+<span class='ln'>  60  </span>    return jsonify(serialize(list(cur))), 200
+<span class='ln'>  61  </span>
+<span class='ln'>  62  </span>
+<span class='ln'>  63  </span>@locations_bp.route(&quot;/locations/&lt;lid&gt;&quot;, methods=[&quot;GET&quot;])
+<span class='ln'>  64  </span>def get_location(lid):
+<span class='ln'>  65  </span>    oid = to_oid(lid)
+<span class='ln'>  66  </span>    if not oid:
+<span class='ln'>  67  </span>        return jsonify({&quot;error&quot;: &quot;Invalid location id&quot;}), 400
+<span class='ln'>  68  </span>    doc = locations.find_one({&quot;_id&quot;: oid})
+<span class='ln'>  69  </span>    if not doc:
+<span class='ln'>  70  </span>        return jsonify({&quot;error&quot;: &quot;Location not found&quot;}), 404
+<span class='ln'>  71  </span>    return jsonify(serialize(doc)), 200
+<span class='ln'>  72  </span>
+<span class='ln'>  73  </span>
+<span class='ln'>  74  </span>@locations_bp.route(&quot;/locations&quot;, methods=[&quot;POST&quot;])
+<span class='ln'>  75  </span>@admin_required
+<span class='ln'>  76  </span>def add_location():
+<span class='ln'>  77  </span>    d = request.get_json(silent=True)
+<span class='ln'>  78  </span>    errors = validate_location(d)
+<span class='ln'>  79  </span>    if errors:
+<span class='ln'>  80  </span>        return jsonify({&quot;error&quot;: &quot;Validation failed&quot;, &quot;details&quot;: errors}), 400
+<span class='ln'>  81  </span>    doc = {&quot;name&quot;: d[&quot;name&quot;].strip(), &quot;country&quot;: d[&quot;country&quot;], &quot;region&quot;: d.get(&quot;region&quot;, &quot;&quot;),
+<span class='ln'>  82  </span>           &quot;geo&quot;: {&quot;type&quot;: &quot;Point&quot;, &quot;coordinates&quot;: [d[&quot;lng&quot;], d[&quot;lat&quot;]]},
+<span class='ln'>  83  </span>           &quot;elevation_m&quot;: d.get(&quot;elevation_m&quot;, 0), &quot;tags&quot;: d.get(&quot;tags&quot;, []),
+<span class='ln'>  84  </span>           &quot;forecasts&quot;: [], &quot;observations&quot;: []}
+<span class='ln'>  85  </span>    new_id = locations.insert_one(doc).inserted_id
+<span class='ln'>  86  </span>    return jsonify({&quot;id&quot;: str(new_id), &quot;url&quot;: f&quot;/api/v1/locations/{new_id}&quot;}), 201
+<span class='ln'>  87  </span>
+<span class='ln'>  88  </span>
+<span class='ln'>  89  </span>@locations_bp.route(&quot;/locations/&lt;lid&gt;&quot;, methods=[&quot;PUT&quot;])
+<span class='ln'>  90  </span>@admin_required
+<span class='ln'>  91  </span>def edit_location(lid):
+<span class='ln'>  92  </span>    oid = to_oid(lid)
+<span class='ln'>  93  </span>    if not oid:
+<span class='ln'>  94  </span>        return jsonify({&quot;error&quot;: &quot;Invalid location id&quot;}), 400
+<span class='ln'>  95  </span>    d = request.get_json(silent=True)
+<span class='ln'>  96  </span>    errors = validate_location(d, partial=True)
+<span class='ln'>  97  </span>    if errors or not d:
+<span class='ln'>  98  </span>        return jsonify({&quot;error&quot;: &quot;Validation failed&quot;,
+<span class='ln'>  99  </span>                        &quot;details&quot;: errors or {&quot;body&quot;: &quot;cannot be empty&quot;}}), 400
+<span class='ln'> 100  </span>    upd = {k: d[k] for k in (&quot;name&quot;, &quot;country&quot;, &quot;region&quot;, &quot;elevation_m&quot;, &quot;tags&quot;) if k in d}
+<span class='ln'> 101  </span>    if &quot;lat&quot; in d or &quot;lng&quot; in d:
+<span class='ln'> 102  </span>        cur = locations.find_one({&quot;_id&quot;: oid}, {&quot;geo&quot;: 1})
+<span class='ln'> 103  </span>        if not cur:
+<span class='ln'> 104  </span>            return jsonify({&quot;error&quot;: &quot;Location not found&quot;}), 404
+<span class='ln'> 105  </span>        lng0, lat0 = cur[&quot;geo&quot;][&quot;coordinates&quot;]
+<span class='ln'> 106  </span>        upd[&quot;geo&quot;] = {&quot;type&quot;: &quot;Point&quot;, &quot;coordinates&quot;: [d.get(&quot;lng&quot;, lng0), d.get(&quot;lat&quot;, lat0)]}
+<span class='ln'> 107  </span>    if not upd:
+<span class='ln'> 108  </span>        return jsonify({&quot;error&quot;: &quot;Validation failed&quot;,
+<span class='ln'> 109  </span>                        &quot;details&quot;: {&quot;body&quot;: &quot;no updatable fields&quot;}}), 400
+<span class='ln'> 110  </span>    r = locations.update_one({&quot;_id&quot;: oid}, {&quot;$set&quot;: upd})
+<span class='ln'> 111  </span>    if r.matched_count == 0:
+<span class='ln'> 112  </span>        return jsonify({&quot;error&quot;: &quot;Location not found&quot;}), 404
+<span class='ln'> 113  </span>    return jsonify({&quot;message&quot;: &quot;Location updated&quot;}), 200
+<span class='ln'> 114  </span>
+<span class='ln'> 115  </span>
+<span class='ln'> 116  </span>@locations_bp.route(&quot;/locations/&lt;lid&gt;&quot;, methods=[&quot;DELETE&quot;])
+<span class='ln'> 117  </span>@admin_required
+<span class='ln'> 118  </span>def delete_location(lid):
+<span class='ln'> 119  </span>    oid = to_oid(lid)
+<span class='ln'> 120  </span>    if not oid:
+<span class='ln'> 121  </span>        return jsonify({&quot;error&quot;: &quot;Invalid location id&quot;}), 400
+<span class='ln'> 122  </span>    if locations.delete_one({&quot;_id&quot;: oid}).deleted_count == 0:
+<span class='ln'> 123  </span>        return jsonify({&quot;error&quot;: &quot;Location not found&quot;}), 404
+<span class='ln'> 124  </span>    return &quot;&quot;, 204
+</pre>
+<h2 class=''>blueprints/observations.py (105 lines)</h2><pre>
+<span class='ln'>   1  </span>from datetime import date
+<span class='ln'>   2  </span>from bson import ObjectId
+<span class='ln'>   3  </span>from flask import Blueprint, request, jsonify, g
+<span class='ln'>   4  </span>from db import locations
+<span class='ln'>   5  </span>from utils import to_oid, serialize
+<span class='ln'>   6  </span>from validators import validate_observation
+<span class='ln'>   7  </span>from decorators import jwt_required
+<span class='ln'>   8  </span>
+<span class='ln'>   9  </span>observations_bp = Blueprint(&quot;observations&quot;, __name__)
+<span class='ln'>  10  </span>
+<span class='ln'>  11  </span>
+<span class='ln'>  12  </span>@observations_bp.route(&quot;/locations/&lt;lid&gt;/observations&quot;, methods=[&quot;GET&quot;])
+<span class='ln'>  13  </span>def list_observations(lid):
+<span class='ln'>  14  </span>    oid = to_oid(lid)
+<span class='ln'>  15  </span>    if not oid:
+<span class='ln'>  16  </span>        return jsonify({&quot;error&quot;: &quot;Invalid location id&quot;}), 400
+<span class='ln'>  17  </span>    doc = locations.find_one({&quot;_id&quot;: oid}, {&quot;observations&quot;: 1})
+<span class='ln'>  18  </span>    if not doc:
+<span class='ln'>  19  </span>        return jsonify({&quot;error&quot;: &quot;Location not found&quot;}), 404
+<span class='ln'>  20  </span>    obs = sorted(doc[&quot;observations&quot;], key=lambda o: o[&quot;date&quot;], reverse=True)
+<span class='ln'>  21  </span>    if request.args.get(&quot;user&quot;):                      # ?user=alice
+<span class='ln'>  22  </span>        obs = [o for o in obs if o.get(&quot;user&quot;) == request.args[&quot;user&quot;]]
+<span class='ln'>  23  </span>    return jsonify(serialize(obs)), 200
+<span class='ln'>  24  </span>
+<span class='ln'>  25  </span>
+<span class='ln'>  26  </span>@observations_bp.route(&quot;/locations/&lt;lid&gt;/observations/&lt;obs_id&gt;&quot;, methods=[&quot;GET&quot;])
+<span class='ln'>  27  </span>def get_observation(lid, obs_id):
+<span class='ln'>  28  </span>    l, o = to_oid(lid), to_oid(obs_id)
+<span class='ln'>  29  </span>    if not l or not o:
+<span class='ln'>  30  </span>        return jsonify({&quot;error&quot;: &quot;Invalid id&quot;}), 400
+<span class='ln'>  31  </span>    doc = locations.find_one({&quot;_id&quot;: l, &quot;observations._id&quot;: o}, {&quot;observations.$&quot;: 1})
+<span class='ln'>  32  </span>    if not doc:
+<span class='ln'>  33  </span>        return jsonify({&quot;error&quot;: &quot;Observation not found&quot;}), 404
+<span class='ln'>  34  </span>    return jsonify(serialize(doc[&quot;observations&quot;][0])), 200
+<span class='ln'>  35  </span>
+<span class='ln'>  36  </span>
+<span class='ln'>  37  </span>@observations_bp.route(&quot;/locations/&lt;lid&gt;/observations&quot;, methods=[&quot;POST&quot;])
+<span class='ln'>  38  </span>@jwt_required
+<span class='ln'>  39  </span>def add_observation(lid):
+<span class='ln'>  40  </span>    l = to_oid(lid)
+<span class='ln'>  41  </span>    if not l:
+<span class='ln'>  42  </span>        return jsonify({&quot;error&quot;: &quot;Invalid location id&quot;}), 400
+<span class='ln'>  43  </span>    d = request.get_json(silent=True)
+<span class='ln'>  44  </span>    errors = validate_observation(d)
+<span class='ln'>  45  </span>    if errors:
+<span class='ln'>  46  </span>        return jsonify({&quot;error&quot;: &quot;Validation failed&quot;, &quot;details&quot;: errors}), 400
+<span class='ln'>  47  </span>
+<span class='ln'>  48  </span>    d[&quot;_id&quot;] = ObjectId()
+<span class='ln'>  49  </span>    d[&quot;user&quot;] = g.user[&quot;sub&quot;]                         # username comes from the token
+<span class='ln'>  50  </span>    d[&quot;created&quot;] = date.today().isoformat()
+<span class='ln'>  51  </span>
+<span class='ln'>  52  </span>    # one observation per user per date
+<span class='ln'>  53  </span>    r = locations.update_one(
+<span class='ln'>  54  </span>        {&quot;_id&quot;: l, &quot;observations&quot;: {&quot;$not&quot;: {&quot;$elemMatch&quot;: {&quot;date&quot;: d[&quot;date&quot;], &quot;user&quot;: d[&quot;user&quot;]}}}},
+<span class='ln'>  55  </span>        {&quot;$push&quot;: {&quot;observations&quot;: d}})
+<span class='ln'>  56  </span>    if r.matched_count == 0:
+<span class='ln'>  57  </span>        if locations.count_documents({&quot;_id&quot;: l}) == 0:
+<span class='ln'>  58  </span>            return jsonify({&quot;error&quot;: &quot;Location not found&quot;}), 404
+<span class='ln'>  59  </span>        return jsonify({&quot;error&quot;: &quot;You already logged an observation for that date&quot;}), 409
+<span class='ln'>  60  </span>    return jsonify({&quot;id&quot;: str(d[&quot;_id&quot;]),
+<span class='ln'>  61  </span>                    &quot;url&quot;: f&quot;/api/v1/locations/{lid}/observations/{d[&#x27;_id&#x27;]}&quot;}), 201
+<span class='ln'>  62  </span>
+<span class='ln'>  63  </span>
+<span class='ln'>  64  </span>def owner_filter(l, o):
+<span class='ln'>  65  </span>    &quot;&quot;&quot;Matches the observation only if the caller owns it (admins can touch any).&quot;&quot;&quot;
+<span class='ln'>  66  </span>    elem = {&quot;_id&quot;: o}
+<span class='ln'>  67  </span>    if g.user.get(&quot;role&quot;) != &quot;admin&quot;:
+<span class='ln'>  68  </span>        elem[&quot;user&quot;] = g.user[&quot;sub&quot;]
+<span class='ln'>  69  </span>    return {&quot;_id&quot;: l, &quot;observations&quot;: {&quot;$elemMatch&quot;: elem}}
+<span class='ln'>  70  </span>
+<span class='ln'>  71  </span>
+<span class='ln'>  72  </span>def forbidden_or_missing(l, o):
+<span class='ln'>  73  </span>    &quot;&quot;&quot;Used when the owner check failed: was it someone else&#x27;s, or does it not exist?&quot;&quot;&quot;
+<span class='ln'>  74  </span>    if locations.count_documents({&quot;_id&quot;: l, &quot;observations._id&quot;: o}):
+<span class='ln'>  75  </span>        return jsonify({&quot;error&quot;: &quot;You can only modify your own observations&quot;}), 403
+<span class='ln'>  76  </span>    return jsonify({&quot;error&quot;: &quot;Observation not found&quot;}), 404
+<span class='ln'>  77  </span>
+<span class='ln'>  78  </span>
+<span class='ln'>  79  </span>@observations_bp.route(&quot;/locations/&lt;lid&gt;/observations/&lt;obs_id&gt;&quot;, methods=[&quot;PUT&quot;])
+<span class='ln'>  80  </span>@jwt_required
+<span class='ln'>  81  </span>def edit_observation(lid, obs_id):
+<span class='ln'>  82  </span>    l, o = to_oid(lid), to_oid(obs_id)
+<span class='ln'>  83  </span>    if not l or not o:
+<span class='ln'>  84  </span>        return jsonify({&quot;error&quot;: &quot;Invalid id&quot;}), 400
+<span class='ln'>  85  </span>    d = request.get_json(silent=True)
+<span class='ln'>  86  </span>    errors = validate_observation(d, partial=True)
+<span class='ln'>  87  </span>    if errors or not d:
+<span class='ln'>  88  </span>        return jsonify({&quot;error&quot;: &quot;Validation failed&quot;,
+<span class='ln'>  89  </span>                        &quot;details&quot;: errors or {&quot;body&quot;: &quot;cannot be empty&quot;}}), 400
+<span class='ln'>  90  </span>    upd = {f&quot;observations.$.{k}&quot;: v for k, v in d.items()}
+<span class='ln'>  91  </span>    if locations.update_one(owner_filter(l, o), {&quot;$set&quot;: upd}).matched_count == 0:
+<span class='ln'>  92  </span>        return forbidden_or_missing(l, o)
+<span class='ln'>  93  </span>    return jsonify({&quot;message&quot;: &quot;Observation updated&quot;}), 200
+<span class='ln'>  94  </span>
+<span class='ln'>  95  </span>
+<span class='ln'>  96  </span>@observations_bp.route(&quot;/locations/&lt;lid&gt;/observations/&lt;obs_id&gt;&quot;, methods=[&quot;DELETE&quot;])
+<span class='ln'>  97  </span>@jwt_required
+<span class='ln'>  98  </span>def delete_observation(lid, obs_id):
+<span class='ln'>  99  </span>    l, o = to_oid(lid), to_oid(obs_id)
+<span class='ln'> 100  </span>    if not l or not o:
+<span class='ln'> 101  </span>        return jsonify({&quot;error&quot;: &quot;Invalid id&quot;}), 400
+<span class='ln'> 102  </span>    r = locations.update_one(owner_filter(l, o), {&quot;$pull&quot;: {&quot;observations&quot;: {&quot;_id&quot;: o}}})
+<span class='ln'> 103  </span>    if r.matched_count == 0:
+<span class='ln'> 104  </span>        return forbidden_or_missing(l, o)
+<span class='ln'> 105  </span>    return &quot;&quot;, 204
+</pre>
+<h2 class=''>blueprints/tracker.py (57 lines)</h2><pre>
+<span class='ln'>   1  </span>from datetime import date
+<span class='ln'>   2  </span>from flask import Blueprint, jsonify, g
+<span class='ln'>   3  </span>from db import users, locations
+<span class='ln'>   4  </span>from utils import to_oid, serialize
+<span class='ln'>   5  </span>from decorators import jwt_required
+<span class='ln'>   6  </span>
+<span class='ln'>   7  </span>tracker_bp = Blueprint(&quot;tracker&quot;, __name__)
+<span class='ln'>   8  </span>
+<span class='ln'>   9  </span>
+<span class='ln'>  10  </span>@tracker_bp.route(&quot;/users/me/tracked/&lt;lid&gt;&quot;, methods=[&quot;POST&quot;])
+<span class='ln'>  11  </span>@jwt_required
+<span class='ln'>  12  </span>def track(lid):
+<span class='ln'>  13  </span>    oid = to_oid(lid)
+<span class='ln'>  14  </span>    if not oid:
+<span class='ln'>  15  </span>        return jsonify({&quot;error&quot;: &quot;Invalid location id&quot;}), 400
+<span class='ln'>  16  </span>    if locations.count_documents({&quot;_id&quot;: oid}) == 0:
+<span class='ln'>  17  </span>        return jsonify({&quot;error&quot;: &quot;Location not found&quot;}), 404
+<span class='ln'>  18  </span>    # $addToSet adds the id only if it isn&#x27;t already in the list
+<span class='ln'>  19  </span>    users.update_one({&quot;username&quot;: g.user[&quot;sub&quot;]}, {&quot;$addToSet&quot;: {&quot;tracked_locations&quot;: oid}})
+<span class='ln'>  20  </span>    return jsonify({&quot;message&quot;: &quot;Location tracked&quot;}), 201
+<span class='ln'>  21  </span>
+<span class='ln'>  22  </span>
+<span class='ln'>  23  </span>@tracker_bp.route(&quot;/users/me/tracked/&lt;lid&gt;&quot;, methods=[&quot;DELETE&quot;])
+<span class='ln'>  24  </span>@jwt_required
+<span class='ln'>  25  </span>def untrack(lid):
+<span class='ln'>  26  </span>    oid = to_oid(lid)
+<span class='ln'>  27  </span>    if not oid:
+<span class='ln'>  28  </span>        return jsonify({&quot;error&quot;: &quot;Invalid location id&quot;}), 400
+<span class='ln'>  29  </span>    r = users.update_one({&quot;username&quot;: g.user[&quot;sub&quot;], &quot;tracked_locations&quot;: oid},
+<span class='ln'>  30  </span>                         {&quot;$pull&quot;: {&quot;tracked_locations&quot;: oid}})
+<span class='ln'>  31  </span>    if r.modified_count == 0:
+<span class='ln'>  32  </span>        return jsonify({&quot;error&quot;: &quot;Location is not tracked&quot;}), 404
+<span class='ln'>  33  </span>    return &quot;&quot;, 204
+<span class='ln'>  34  </span>
+<span class='ln'>  35  </span>
+<span class='ln'>  36  </span>@tracker_bp.route(&quot;/users/me/tracker&quot;, methods=[&quot;GET&quot;])
+<span class='ln'>  37  </span>@jwt_required
+<span class='ln'>  38  </span>def dashboard():
+<span class='ln'>  39  </span>    &quot;&quot;&quot;Each tracked city, its next forecast, and this user&#x27;s alerts for it.&quot;&quot;&quot;
+<span class='ln'>  40  </span>    me = users.find_one({&quot;username&quot;: g.user[&quot;sub&quot;]}, {&quot;tracked_locations&quot;: 1})
+<span class='ln'>  41  </span>    if not me:
+<span class='ln'>  42  </span>        return jsonify({&quot;error&quot;: &quot;User not found&quot;}), 404
+<span class='ln'>  43  </span>    today = date.today().isoformat()
+<span class='ln'>  44  </span>    res = locations.aggregate([
+<span class='ln'>  45  </span>        {&quot;$match&quot;: {&quot;_id&quot;: {&quot;$in&quot;: me.get(&quot;tracked_locations&quot;, [])}}},
+<span class='ln'>  46  </span>        # $lookup joins this city with the alerts collection
+<span class='ln'>  47  </span>        {&quot;$lookup&quot;: {&quot;from&quot;: &quot;alerts&quot;,
+<span class='ln'>  48  </span>                     &quot;let&quot;: {&quot;lid&quot;: &quot;$_id&quot;, &quot;u&quot;: g.user[&quot;sub&quot;]},
+<span class='ln'>  49  </span>                     &quot;pipeline&quot;: [{&quot;$match&quot;: {&quot;$expr&quot;: {&quot;$and&quot;: [
+<span class='ln'>  50  </span>                         {&quot;$eq&quot;: [&quot;$location_id&quot;, &quot;$$lid&quot;]},
+<span class='ln'>  51  </span>                         {&quot;$eq&quot;: [&quot;$user&quot;, &quot;$$u&quot;]}]}}}],
+<span class='ln'>  52  </span>                     &quot;as&quot;: &quot;my_alerts&quot;}},
+<span class='ln'>  53  </span>        {&quot;$project&quot;: {&quot;name&quot;: 1, &quot;country&quot;: 1, &quot;my_alerts&quot;: 1,
+<span class='ln'>  54  </span>                      &quot;next_forecast&quot;: {&quot;$first&quot;: {&quot;$filter&quot;: {
+<span class='ln'>  55  </span>                          &quot;input&quot;: &quot;$forecasts&quot;, &quot;as&quot;: &quot;f&quot;,
+<span class='ln'>  56  </span>                          &quot;cond&quot;: {&quot;$gte&quot;: [&quot;$$f.date&quot;, today]}}}}}}])
+<span class='ln'>  57  </span>    return jsonify(serialize(list(res))), 200
+</pre>
+<h2 class=''>config.py (9 lines)</h2><pre>
+<span class='ln'>   1  </span>import os
+<span class='ln'>   2  </span>from dotenv import load_dotenv
+<span class='ln'>   3  </span>
+<span class='ln'>   4  </span>load_dotenv()   # reads the .env file
+<span class='ln'>   5  </span>
+<span class='ln'>   6  </span>MONGO_URI = os.getenv(&quot;MONGO_URI&quot;, &quot;mongodb://127.0.0.1:27017&quot;)
+<span class='ln'>   7  </span>DB_NAME = &quot;weatherDB&quot;
+<span class='ln'>   8  </span>SECRET_KEY = os.getenv(&quot;SECRET_KEY&quot;, &quot;dev-only-change-me&quot;)
+<span class='ln'>   9  </span>TOKEN_HOURS = 2   # how long a login lasts
+</pre>
+<h2 class=''>db.py (18 lines)</h2><pre>
+<span class='ln'>   1  </span>from pymongo import MongoClient, GEOSPHERE, TEXT
+<span class='ln'>   2  </span>from config import MONGO_URI, DB_NAME
+<span class='ln'>   3  </span>
+<span class='ln'>   4  </span>client = MongoClient(MONGO_URI)
+<span class='ln'>   5  </span>db = client[DB_NAME]
+<span class='ln'>   6  </span>
+<span class='ln'>   7  </span>locations = db.locations
+<span class='ln'>   8  </span>users = db.users
+<span class='ln'>   9  </span>alerts = db.alerts
+<span class='ln'>  10  </span>blacklist = db.blacklist
+<span class='ln'>  11  </span>
+<span class='ln'>  12  </span>def create_indexes():
+<span class='ln'>  13  </span>    locations.create_index([(&quot;geo&quot;, GEOSPHERE)])                # needed for &quot;nearby&quot; searches
+<span class='ln'>  14  </span>    locations.create_index([(&quot;name&quot;, TEXT), (&quot;region&quot;, TEXT)])  # needed for text search
+<span class='ln'>  15  </span>    locations.create_index(&quot;country&quot;)
+<span class='ln'>  16  </span>    users.create_index(&quot;username&quot;, unique=True)                 # no duplicate usernames
+<span class='ln'>  17  </span>    users.create_index(&quot;email&quot;, unique=True)
+<span class='ln'>  18  </span>    blacklist.create_index(&quot;expires&quot;, expireAfterSeconds=0)     # auto-deletes old tokens
+</pre>
+<h2 class=''>decorators.py (34 lines)</h2><pre>
+<span class='ln'>   1  </span>from functools import wraps
+<span class='ln'>   2  </span>import jwt
+<span class='ln'>   3  </span>from flask import request, jsonify, g
+<span class='ln'>   4  </span>from config import SECRET_KEY
+<span class='ln'>   5  </span>from db import blacklist
+<span class='ln'>   6  </span>
+<span class='ln'>   7  </span>def jwt_required(f):
+<span class='ln'>   8  </span>    &quot;&quot;&quot;Put @jwt_required above a route to make it need a valid login token.&quot;&quot;&quot;
+<span class='ln'>   9  </span>    @wraps(f)
+<span class='ln'>  10  </span>    def wrapper(*args, **kwargs):
+<span class='ln'>  11  </span>        token = request.headers.get(&quot;Authorization&quot;, &quot;&quot;).removeprefix(&quot;Bearer &quot;).strip()
+<span class='ln'>  12  </span>        if not token:
+<span class='ln'>  13  </span>            return jsonify({&quot;error&quot;: &quot;Token is missing&quot;}), 401
+<span class='ln'>  14  </span>        if blacklist.find_one({&quot;token&quot;: token}):
+<span class='ln'>  15  </span>            return jsonify({&quot;error&quot;: &quot;Token has been revoked&quot;}), 401
+<span class='ln'>  16  </span>        try:
+<span class='ln'>  17  </span>            g.user = jwt.decode(token, SECRET_KEY, algorithms=[&quot;HS256&quot;])
+<span class='ln'>  18  </span>            g.token = token
+<span class='ln'>  19  </span>        except jwt.ExpiredSignatureError:
+<span class='ln'>  20  </span>            return jsonify({&quot;error&quot;: &quot;Token has expired&quot;}), 401
+<span class='ln'>  21  </span>        except jwt.InvalidTokenError:
+<span class='ln'>  22  </span>            return jsonify({&quot;error&quot;: &quot;Token is invalid&quot;}), 401
+<span class='ln'>  23  </span>        return f(*args, **kwargs)
+<span class='ln'>  24  </span>    return wrapper
+<span class='ln'>  25  </span>
+<span class='ln'>  26  </span>def admin_required(f):
+<span class='ln'>  27  </span>    &quot;&quot;&quot;Like jwt_required, but the user must also be an admin.&quot;&quot;&quot;
+<span class='ln'>  28  </span>    @wraps(f)
+<span class='ln'>  29  </span>    @jwt_required
+<span class='ln'>  30  </span>    def wrapper(*args, **kwargs):
+<span class='ln'>  31  </span>        if g.user.get(&quot;role&quot;) != &quot;admin&quot;:
+<span class='ln'>  32  </span>            return jsonify({&quot;error&quot;: &quot;Admin access required&quot;}), 403
+<span class='ln'>  33  </span>        return f(*args, **kwargs)
+<span class='ln'>  34  </span>    return wrapper
+</pre>
+<h2 class=''>scripts/import_data.py (129 lines)</h2><pre>
+<span class='ln'>   1  </span>import sys, os, requests
+<span class='ln'>   2  </span>from datetime import date, timedelta
+<span class='ln'>   3  </span>from bson import ObjectId
+<span class='ln'>   4  </span>
+<span class='ln'>   5  </span># lets this script import db.py from the project folder
+<span class='ln'>   6  </span>sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+<span class='ln'>   7  </span>from db import locations, create_indexes
+<span class='ln'>   8  </span>
+<span class='ln'>   9  </span># name, country, region, latitude, longitude, elevation (m), tags
+<span class='ln'>  10  </span>CITIES = [
+<span class='ln'>  11  </span>    (&quot;Belfast&quot;, &quot;UK&quot;, &quot;Northern Ireland&quot;, 54.5973, -5.9301, 10, [&quot;coastal&quot;, &quot;city&quot;]),
+<span class='ln'>  12  </span>    (&quot;London&quot;, &quot;UK&quot;, &quot;England&quot;, 51.5074, -0.1278, 11, [&quot;city&quot;]),
+<span class='ln'>  13  </span>    (&quot;Edinburgh&quot;, &quot;UK&quot;, &quot;Scotland&quot;, 55.9533, -3.1883, 47, [&quot;coastal&quot;, &quot;city&quot;]),
+<span class='ln'>  14  </span>    (&quot;Cardiff&quot;, &quot;UK&quot;, &quot;Wales&quot;, 51.4816, -3.1791, 11, [&quot;coastal&quot;, &quot;city&quot;]),
+<span class='ln'>  15  </span>    (&quot;Manchester&quot;, &quot;UK&quot;, &quot;England&quot;, 53.4808, -2.2426, 38, [&quot;city&quot;]),
+<span class='ln'>  16  </span>    (&quot;Dublin&quot;, &quot;Ireland&quot;, &quot;Leinster&quot;, 53.3498, -6.2603, 20, [&quot;coastal&quot;, &quot;city&quot;]),
+<span class='ln'>  17  </span>    (&quot;Paris&quot;, &quot;France&quot;, &quot;Ile-de-France&quot;, 48.8566, 2.3522, 35, [&quot;city&quot;]),
+<span class='ln'>  18  </span>    (&quot;Madrid&quot;, &quot;Spain&quot;, &quot;Madrid&quot;, 40.4168, -3.7038, 667, [&quot;inland&quot;, &quot;hot&quot;]),
+<span class='ln'>  19  </span>    (&quot;Lisbon&quot;, &quot;Portugal&quot;, &quot;Lisboa&quot;, 38.7223, -9.1393, 2, [&quot;coastal&quot;, &quot;hot&quot;]),
+<span class='ln'>  20  </span>    (&quot;Rome&quot;, &quot;Italy&quot;, &quot;Lazio&quot;, 41.9028, 12.4964, 21, [&quot;city&quot;, &quot;hot&quot;]),
+<span class='ln'>  21  </span>    (&quot;Berlin&quot;, &quot;Germany&quot;, &quot;Berlin&quot;, 52.5200, 13.4050, 34, [&quot;city&quot;, &quot;inland&quot;]),
+<span class='ln'>  22  </span>    (&quot;Amsterdam&quot;, &quot;Netherlands&quot;, &quot;North Holland&quot;, 52.3676, 4.9041, 0, [&quot;coastal&quot;, &quot;city&quot;]),
+<span class='ln'>  23  </span>    (&quot;Oslo&quot;, &quot;Norway&quot;, &quot;Oslo&quot;, 59.9139, 10.7522, 23, [&quot;coastal&quot;, &quot;cold&quot;]),
+<span class='ln'>  24  </span>    (&quot;Reykjavik&quot;, &quot;Iceland&quot;, &quot;Capital Region&quot;, 64.1466, -21.9426, 14, [&quot;coastal&quot;, &quot;cold&quot;]),
+<span class='ln'>  25  </span>    (&quot;Athens&quot;, &quot;Greece&quot;, &quot;Attica&quot;, 37.9838, 23.7275, 70, [&quot;city&quot;, &quot;hot&quot;]),
+<span class='ln'>  26  </span>    (&quot;Istanbul&quot;, &quot;Turkey&quot;, &quot;Marmara&quot;, 41.0082, 28.9784, 40, [&quot;coastal&quot;, &quot;city&quot;]),
+<span class='ln'>  27  </span>    (&quot;Moscow&quot;, &quot;Russia&quot;, &quot;Moscow&quot;, 55.7558, 37.6173, 156, [&quot;inland&quot;, &quot;cold&quot;]),
+<span class='ln'>  28  </span>    (&quot;Cairo&quot;, &quot;Egypt&quot;, &quot;Cairo&quot;, 30.0444, 31.2357, 23, [&quot;desert&quot;, &quot;hot&quot;]),
+<span class='ln'>  29  </span>    (&quot;Lagos&quot;, &quot;Nigeria&quot;, &quot;Lagos&quot;, 6.5244, 3.3792, 41, [&quot;coastal&quot;, &quot;hot&quot;]),
+<span class='ln'>  30  </span>    (&quot;Nairobi&quot;, &quot;Kenya&quot;, &quot;Nairobi&quot;, -1.2921, 36.8219, 1795, [&quot;inland&quot;, &quot;mountain&quot;]),
+<span class='ln'>  31  </span>    (&quot;Cape Town&quot;, &quot;South Africa&quot;, &quot;Western Cape&quot;, -33.9249, 18.4241, 25, [&quot;coastal&quot;]),
+<span class='ln'>  32  </span>    (&quot;Dubai&quot;, &quot;UAE&quot;, &quot;Dubai&quot;, 25.2048, 55.2708, 5, [&quot;desert&quot;, &quot;hot&quot;, &quot;coastal&quot;]),
+<span class='ln'>  33  </span>    (&quot;Mumbai&quot;, &quot;India&quot;, &quot;Maharashtra&quot;, 19.0760, 72.8777, 14, [&quot;coastal&quot;, &quot;hot&quot;]),
+<span class='ln'>  34  </span>    (&quot;Delhi&quot;, &quot;India&quot;, &quot;Delhi&quot;, 28.6139, 77.2090, 216, [&quot;inland&quot;, &quot;hot&quot;]),
+<span class='ln'>  35  </span>    (&quot;Dhaka&quot;, &quot;Bangladesh&quot;, &quot;Dhaka&quot;, 23.8103, 90.4125, 4, [&quot;inland&quot;, &quot;hot&quot;]),
+<span class='ln'>  36  </span>    (&quot;Bangkok&quot;, &quot;Thailand&quot;, &quot;Bangkok&quot;, 13.7563, 100.5018, 2, [&quot;city&quot;, &quot;hot&quot;]),
+<span class='ln'>  37  </span>    (&quot;Singapore&quot;, &quot;Singapore&quot;, &quot;Central&quot;, 1.3521, 103.8198, 15, [&quot;coastal&quot;, &quot;hot&quot;]),
+<span class='ln'>  38  </span>    (&quot;Tokyo&quot;, &quot;Japan&quot;, &quot;Kanto&quot;, 35.6762, 139.6503, 40, [&quot;coastal&quot;, &quot;city&quot;]),
+<span class='ln'>  39  </span>    (&quot;Beijing&quot;, &quot;China&quot;, &quot;Beijing&quot;, 39.9042, 116.4074, 44, [&quot;city&quot;, &quot;inland&quot;]),
+<span class='ln'>  40  </span>    (&quot;Sydney&quot;, &quot;Australia&quot;, &quot;New South Wales&quot;, -33.8688, 151.2093, 58, [&quot;coastal&quot;]),
+<span class='ln'>  41  </span>    (&quot;Auckland&quot;, &quot;New Zealand&quot;, &quot;Auckland&quot;, -36.8485, 174.7633, 20, [&quot;coastal&quot;]),
+<span class='ln'>  42  </span>    (&quot;New York&quot;, &quot;USA&quot;, &quot;New York&quot;, 40.7128, -74.0060, 10, [&quot;coastal&quot;, &quot;city&quot;]),
+<span class='ln'>  43  </span>    (&quot;Denver&quot;, &quot;USA&quot;, &quot;Colorado&quot;, 39.7392, -104.9903, 1609, [&quot;mountain&quot;, &quot;inland&quot;]),
+<span class='ln'>  44  </span>    (&quot;Los Angeles&quot;, &quot;USA&quot;, &quot;California&quot;, 34.0522, -118.2437, 93, [&quot;coastal&quot;, &quot;hot&quot;]),
+<span class='ln'>  45  </span>    (&quot;Toronto&quot;, &quot;Canada&quot;, &quot;Ontario&quot;, 43.6532, -79.3832, 76, [&quot;city&quot;, &quot;cold&quot;]),
+<span class='ln'>  46  </span>    (&quot;Mexico City&quot;, &quot;Mexico&quot;, &quot;CDMX&quot;, 19.4326, -99.1332, 2240, [&quot;mountain&quot;, &quot;city&quot;]),
+<span class='ln'>  47  </span>    (&quot;Sao Paulo&quot;, &quot;Brazil&quot;, &quot;Sao Paulo&quot;, -23.5505, -46.6333, 760, [&quot;city&quot;]),
+<span class='ln'>  48  </span>    (&quot;Buenos Aires&quot;, &quot;Argentina&quot;, &quot;Buenos Aires&quot;, -34.6037, -58.3816, 25, [&quot;coastal&quot;, &quot;city&quot;]),
+<span class='ln'>  49  </span>]
+<span class='ln'>  50  </span>
+<span class='ln'>  51  </span>DAILY = (&quot;temperature_2m_max,temperature_2m_min,precipitation_sum,&quot;
+<span class='ln'>  52  </span>         &quot;wind_speed_10m_max,relative_humidity_2m_mean,weather_code&quot;)
+<span class='ln'>  53  </span>
+<span class='ln'>  54  </span>
+<span class='ln'>  55  </span>def condition(code):
+<span class='ln'>  56  </span>    &quot;&quot;&quot;Turn a weather code number into a simple word.&quot;&quot;&quot;
+<span class='ln'>  57  </span>    if code == 0: return &quot;Clear&quot;
+<span class='ln'>  58  </span>    if code in (1, 2, 3): return &quot;Cloudy&quot;
+<span class='ln'>  59  </span>    if code in (45, 48): return &quot;Fog&quot;
+<span class='ln'>  60  </span>    if 51 &lt;= code &lt;= 67 or 80 &lt;= code &lt;= 82: return &quot;Rain&quot;
+<span class='ln'>  61  </span>    if 71 &lt;= code &lt;= 77 or code in (85, 86): return &quot;Snow&quot;
+<span class='ln'>  62  </span>    if code &gt;= 95: return &quot;Thunderstorm&quot;
+<span class='ln'>  63  </span>    return &quot;Other&quot;
+<span class='ln'>  64  </span>
+<span class='ln'>  65  </span>
+<span class='ln'>  66  </span>def rows(daily):
+<span class='ln'>  67  </span>    &quot;&quot;&quot;Turn Open-Meteo&#x27;s lists into a list of one dictionary per day.&quot;&quot;&quot;
+<span class='ln'>  68  </span>    n = len(daily[&quot;time&quot;])
+<span class='ln'>  69  </span>    get = lambda key: daily.get(key) or [None] * n
+<span class='ln'>  70  </span>    tmax, tmin = get(&quot;temperature_2m_max&quot;), get(&quot;temperature_2m_min&quot;)
+<span class='ln'>  71  </span>    hum, wind = get(&quot;relative_humidity_2m_mean&quot;), get(&quot;wind_speed_10m_max&quot;)
+<span class='ln'>  72  </span>    rain, code = get(&quot;precipitation_sum&quot;), get(&quot;weather_code&quot;)
+<span class='ln'>  73  </span>    out = []
+<span class='ln'>  74  </span>    for i, d in enumerate(daily[&quot;time&quot;]):
+<span class='ln'>  75  </span>        if tmax[i] is None or tmin[i] is None:
+<span class='ln'>  76  </span>            continue                      # skip days with missing data
+<span class='ln'>  77  </span>        out.append({
+<span class='ln'>  78  </span>            &quot;_id&quot;: ObjectId(),
+<span class='ln'>  79  </span>            &quot;date&quot;: d,
+<span class='ln'>  80  </span>            &quot;temp_max&quot;: tmax[i],
+<span class='ln'>  81  </span>            &quot;temp_min&quot;: tmin[i],
+<span class='ln'>  82  </span>            &quot;humidity&quot;: hum[i] if hum[i] is not None else 0,
+<span class='ln'>  83  </span>            &quot;wind_kph&quot;: wind[i] if wind[i] is not None else 0,
+<span class='ln'>  84  </span>            &quot;precip_mm&quot;: rain[i] if rain[i] is not None else 0,
+<span class='ln'>  85  </span>            &quot;condition&quot;: condition(code[i] or 0),
+<span class='ln'>  86  </span>        })
+<span class='ln'>  87  </span>    return out
+<span class='ln'>  88  </span>
+<span class='ln'>  89  </span>
+<span class='ln'>  90  </span>def main():
+<span class='ln'>  91  </span>    locations.delete_many({})             # start fresh each time
+<span class='ln'>  92  </span>    end_obs = date.today() - timedelta(days=7)   # archive data lags a few days
+<span class='ln'>  93  </span>    start_obs = end_obs - timedelta(days=60)
+<span class='ln'>  94  </span>
+<span class='ln'>  95  </span>    for name, country, region, lat, lng, elev, tags in CITIES:
+<span class='ln'>  96  </span>        try:
+<span class='ln'>  97  </span>            f = requests.get(&quot;https://api.open-meteo.com/v1/forecast&quot;, params={
+<span class='ln'>  98  </span>                &quot;latitude&quot;: lat, &quot;longitude&quot;: lng, &quot;daily&quot;: DAILY,
+<span class='ln'>  99  </span>                &quot;past_days&quot;: 60, &quot;forecast_days&quot;: 14, &quot;timezone&quot;: &quot;auto&quot;},
+<span class='ln'> 100  </span>                timeout=30).json()
+<span class='ln'> 101  </span>            a = requests.get(&quot;https://archive-api.open-meteo.com/v1/archive&quot;, params={
+<span class='ln'> 102  </span>                &quot;latitude&quot;: lat, &quot;longitude&quot;: lng, &quot;daily&quot;: DAILY,
+<span class='ln'> 103  </span>                &quot;start_date&quot;: start_obs.isoformat(), &quot;end_date&quot;: end_obs.isoformat(),
+<span class='ln'> 104  </span>                &quot;timezone&quot;: &quot;auto&quot;}, timeout=30).json()
+<span class='ln'> 105  </span>            forecasts = rows(f[&quot;daily&quot;])
+<span class='ln'> 106  </span>            observations = rows(a[&quot;daily&quot;])
+<span class='ln'> 107  </span>        except Exception as e:            # one bad city shouldn&#x27;t stop the rest
+<span class='ln'> 108  </span>            print(&quot;FAILED&quot;, name, &quot;-&quot;, e)
+<span class='ln'> 109  </span>            continue
+<span class='ln'> 110  </span>
+<span class='ln'> 111  </span>        for o in observations:
+<span class='ln'> 112  </span>            o[&quot;user&quot;] = &quot;openmeteo-archive&quot;
+<span class='ln'> 113  </span>            o[&quot;comment&quot;] = &quot;Imported archive data&quot;
+<span class='ln'> 114  </span>            o[&quot;created&quot;] = date.today().isoformat()
+<span class='ln'> 115  </span>
+<span class='ln'> 116  </span>        locations.insert_one({
+<span class='ln'> 117  </span>            &quot;name&quot;: name, &quot;country&quot;: country, &quot;region&quot;: region,
+<span class='ln'> 118  </span>            &quot;geo&quot;: {&quot;type&quot;: &quot;Point&quot;, &quot;coordinates&quot;: [lng, lat]},   # GeoJSON order is [lng, lat]
+<span class='ln'> 119  </span>            &quot;elevation_m&quot;: elev, &quot;tags&quot;: tags, &quot;timezone&quot;: f.get(&quot;timezone&quot;),
+<span class='ln'> 120  </span>            &quot;forecasts&quot;: forecasts, &quot;observations&quot;: observations,
+<span class='ln'> 121  </span>        })
+<span class='ln'> 122  </span>        print(&quot;imported&quot;, name, &quot;-&quot;, len(forecasts), &quot;forecasts,&quot;, len(observations), &quot;observations&quot;)
+<span class='ln'> 123  </span>
+<span class='ln'> 124  </span>    create_indexes()
+<span class='ln'> 125  </span>    print(&quot;Done. Cities in database:&quot;, locations.count_documents({}))
+<span class='ln'> 126  </span>
+<span class='ln'> 127  </span>
+<span class='ln'> 128  </span>if __name__ == &quot;__main__&quot;:
+<span class='ln'> 129  </span>    main()
+</pre>
+<h2 class=''>tests/test_app.py (8 lines)</h2><pre>
+<span class='ln'>   1  </span>from app import create_app
+<span class='ln'>   2  </span>
+<span class='ln'>   3  </span>
+<span class='ln'>   4  </span>def test_app_factory_creates_app():
+<span class='ln'>   5  </span>    app = create_app()
+<span class='ln'>   6  </span>    assert app is not None
+<span class='ln'>   7  </span>    assert app.url_map
+<span class='ln'>   8  </span>    assert &quot;auth&quot; in {bp.name for bp in app.blueprints.values()}
+</pre>
+<h2 class=''>utils.py (32 lines)</h2><pre>
+<span class='ln'>   1  </span>from datetime import datetime
+<span class='ln'>   2  </span>from bson import ObjectId
+<span class='ln'>   3  </span>from bson.errors import InvalidId
+<span class='ln'>   4  </span>from flask import request
+<span class='ln'>   5  </span>
+<span class='ln'>   6  </span>def to_oid(value):
+<span class='ln'>   7  </span>    &quot;&quot;&quot;Turn a string into a MongoDB id, or return None if it&#x27;s not a valid id.&quot;&quot;&quot;
+<span class='ln'>   8  </span>    try:
+<span class='ln'>   9  </span>        return ObjectId(value)
+<span class='ln'>  10  </span>    except (InvalidId, TypeError):
+<span class='ln'>  11  </span>        return None
+<span class='ln'>  12  </span>
+<span class='ln'>  13  </span>def serialize(obj):
+<span class='ln'>  14  </span>    &quot;&quot;&quot;Convert MongoDB data into something that can be sent as JSON.&quot;&quot;&quot;
+<span class='ln'>  15  </span>    if isinstance(obj, list):
+<span class='ln'>  16  </span>        return [serialize(i) for i in obj]
+<span class='ln'>  17  </span>    if isinstance(obj, dict):
+<span class='ln'>  18  </span>        return {k: serialize(v) for k, v in obj.items()}
+<span class='ln'>  19  </span>    if isinstance(obj, ObjectId):
+<span class='ln'>  20  </span>        return str(obj)
+<span class='ln'>  21  </span>    if isinstance(obj, datetime):
+<span class='ln'>  22  </span>        return obj.isoformat()
+<span class='ln'>  23  </span>    return obj
+<span class='ln'>  24  </span>
+<span class='ln'>  25  </span>def page_args(default_size=10, max_size=100):
+<span class='ln'>  26  </span>    &quot;&quot;&quot;Read ?pn=2&amp;ps=10 from the URL. Returns (None, None) if they aren&#x27;t numbers.&quot;&quot;&quot;
+<span class='ln'>  27  </span>    try:
+<span class='ln'>  28  </span>        pn = max(int(request.args.get(&quot;pn&quot;, 1)), 1)
+<span class='ln'>  29  </span>        ps = min(max(int(request.args.get(&quot;ps&quot;, default_size)), 1), max_size)
+<span class='ln'>  30  </span>    except ValueError:
+<span class='ln'>  31  </span>        return None, None
+<span class='ln'>  32  </span>    return pn, ps
+</pre>
+<h2 class=''>validators.py (68 lines)</h2><pre>
+<span class='ln'>   1  </span>from datetime import datetime
+<span class='ln'>   2  </span>
+<span class='ln'>   3  </span>CONDITIONS = {&quot;Clear&quot;, &quot;Cloudy&quot;, &quot;Fog&quot;, &quot;Rain&quot;, &quot;Snow&quot;, &quot;Thunderstorm&quot;, &quot;Other&quot;}
+<span class='ln'>   4  </span>RANGES = {&quot;temp_max&quot;: (-90, 60), &quot;temp_min&quot;: (-90, 60), &quot;humidity&quot;: (0, 100),
+<span class='ln'>   5  </span>          &quot;wind_kph&quot;: (0, 500), &quot;precip_mm&quot;: (0, 2000)}
+<span class='ln'>   6  </span>REQUIRED = [&quot;date&quot;, &quot;temp_max&quot;, &quot;temp_min&quot;, &quot;condition&quot;]
+<span class='ln'>   7  </span>
+<span class='ln'>   8  </span>def valid_date(s):
+<span class='ln'>   9  </span>    try:
+<span class='ln'>  10  </span>        datetime.strptime(s, &quot;%Y-%m-%d&quot;)
+<span class='ln'>  11  </span>        return True
+<span class='ln'>  12  </span>    except (ValueError, TypeError):
+<span class='ln'>  13  </span>        return False
+<span class='ln'>  14  </span>
+<span class='ln'>  15  </span>def validate_forecast(data, partial=False):
+<span class='ln'>  16  </span>    &quot;&quot;&quot;Returns {field: message}. An empty dict means the data is valid.&quot;&quot;&quot;
+<span class='ln'>  17  </span>    if not isinstance(data, dict):
+<span class='ln'>  18  </span>        return {&quot;body&quot;: &quot;must be a JSON object&quot;}
+<span class='ln'>  19  </span>    errors = {}
+<span class='ln'>  20  </span>    allowed = set(REQUIRED) | set(RANGES)
+<span class='ln'>  21  </span>    for k in data:
+<span class='ln'>  22  </span>        if k not in allowed:
+<span class='ln'>  23  </span>            errors[k] = &quot;unknown field&quot;
+<span class='ln'>  24  </span>    if not partial:
+<span class='ln'>  25  </span>        for k in REQUIRED:
+<span class='ln'>  26  </span>            if k not in data:
+<span class='ln'>  27  </span>                errors[k] = &quot;is required&quot;
+<span class='ln'>  28  </span>    if &quot;date&quot; in data and not valid_date(data[&quot;date&quot;]):
+<span class='ln'>  29  </span>        errors[&quot;date&quot;] = &quot;must be a valid date in YYYY-MM-DD format&quot;
+<span class='ln'>  30  </span>    for field, (lo, hi) in RANGES.items():
+<span class='ln'>  31  </span>        if field in data:
+<span class='ln'>  32  </span>            v = data[field]
+<span class='ln'>  33  </span>            if isinstance(v, bool) or not isinstance(v, (int, float)):
+<span class='ln'>  34  </span>                errors[field] = &quot;must be a number&quot;
+<span class='ln'>  35  </span>            elif not lo &lt;= v &lt;= hi:
+<span class='ln'>  36  </span>                errors[field] = f&quot;must be between {lo} and {hi}&quot;
+<span class='ln'>  37  </span>    if &quot;condition&quot; in data and data[&quot;condition&quot;] not in CONDITIONS:
+<span class='ln'>  38  </span>        errors[&quot;condition&quot;] = f&quot;must be one of {sorted(CONDITIONS)}&quot;
+<span class='ln'>  39  </span>    if (not errors and &quot;temp_max&quot; in data and &quot;temp_min&quot; in data
+<span class='ln'>  40  </span>            and data[&quot;temp_min&quot;] &gt; data[&quot;temp_max&quot;]):
+<span class='ln'>  41  </span>        errors[&quot;temp_min&quot;] = &quot;cannot be greater than temp_max&quot;
+<span class='ln'>  42  </span>    return errors
+<span class='ln'>  43  </span>
+<span class='ln'>  44  </span>def validate_observation(data, partial=False):
+<span class='ln'>  45  </span>    &quot;&quot;&quot;Same rules as a forecast, plus an optional comment.&quot;&quot;&quot;
+<span class='ln'>  46  </span>    if not isinstance(data, dict):
+<span class='ln'>  47  </span>        return {&quot;body&quot;: &quot;must be a JSON object&quot;}
+<span class='ln'>  48  </span>    rest = {k: v for k, v in data.items() if k != &quot;comment&quot;}
+<span class='ln'>  49  </span>    errors = validate_forecast(rest, partial)
+<span class='ln'>  50  </span>    if &quot;comment&quot; in data and (not isinstance(data[&quot;comment&quot;], str) or len(data[&quot;comment&quot;]) &gt; 500):
+<span class='ln'>  51  </span>        errors[&quot;comment&quot;] = &quot;must be a string of at most 500 characters&quot;
+<span class='ln'>  52  </span>    return errors
+<span class='ln'>  53  </span>
+<span class='ln'>  54  </span>def validate_location(data, partial=False):
+<span class='ln'>  55  </span>    if not isinstance(data, dict):
+<span class='ln'>  56  </span>        return {&quot;body&quot;: &quot;must be a JSON object&quot;}
+<span class='ln'>  57  </span>    errors = {}
+<span class='ln'>  58  </span>    if not partial:
+<span class='ln'>  59  </span>        for k in (&quot;name&quot;, &quot;country&quot;, &quot;lat&quot;, &quot;lng&quot;):
+<span class='ln'>  60  </span>            if k not in data:
+<span class='ln'>  61  </span>                errors[k] = &quot;is required&quot;
+<span class='ln'>  62  </span>    if &quot;name&quot; in data and (not isinstance(data[&quot;name&quot;], str) or not data[&quot;name&quot;].strip()):
+<span class='ln'>  63  </span>        errors[&quot;name&quot;] = &quot;must be a non-empty string&quot;
+<span class='ln'>  64  </span>    if &quot;lat&quot; in data and not (isinstance(data[&quot;lat&quot;], (int, float)) and -90 &lt;= data[&quot;lat&quot;] &lt;= 90):
+<span class='ln'>  65  </span>        errors[&quot;lat&quot;] = &quot;must be a number between -90 and 90&quot;
+<span class='ln'>  66  </span>    if &quot;lng&quot; in data and not (isinstance(data[&quot;lng&quot;], (int, float)) and -180 &lt;= data[&quot;lng&quot;] &lt;= 180):
+<span class='ln'>  67  </span>        errors[&quot;lng&quot;] = &quot;must be a number between -180 and 180&quot;
+<span class='ln'>  68  </span>    return errors
+</pre>
+</body></html>
